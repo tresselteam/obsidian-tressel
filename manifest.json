@@ -6,5 +6,5 @@
 	"description": "Official Tressel plugin to sync/export your tweets and threads into Obsidian",
 	"author": "Tressel",
 	"authorUrl": "https://tressel.xyz",
-	"isDesktopOnly": false
+	"isDesktopOnly": true
 }
