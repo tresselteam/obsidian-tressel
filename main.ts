@@ -34,12 +34,11 @@ export default class TresselPlugin extends Plugin {
 		await this.saveSettings();
 
 		// Create a Tressel sync button in the left ribbon.
-		this.addRibbonIcon("sync", "Sync Tressel", (evt: MouseEvent) => {
+		this.addRibbonIcon("sync", "Sync Tressel", async (evt: MouseEvent) => {
 			// Called when the user clicks the button.
-			this.syncTressel().then(() => {
-				this.saveSettings();
-				new Notice("Finished Tressel sync");
-			});
+			await this.syncTressel();
+			await this.saveSettings();
+			new Notice("Finished Tressel sync");
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -140,12 +139,11 @@ export default class TresselPlugin extends Plugin {
 		}
 	}
 
-	clearSyncMemory() {
+	async clearSyncMemory() {
 		this.settings.threadsToIgnore = [];
 		this.settings.tweetsToIgnore = [];
-		this.saveSettings().then(() => {
-			new Notice("Cleared Tressel sync memory");
-		});
+		await this.saveSettings();
+		new Notice("Cleared Tressel sync memory");
 	}
 
 	onunload() {}
@@ -199,8 +197,8 @@ class TresselSettingTab extends PluginSettingTab {
 				"Forget what you've already synced from your Tressel library and start from scratch"
 			)
 			.addButton((button) => {
-				button.setButtonText("Clear Sync Memory").onClick(() => {
-					this.plugin.clearSyncMemory();
+				button.setButtonText("Clear Sync Memory").onClick(async () => {
+					await this.plugin.clearSyncMemory();
 				});
 			});
 	}
