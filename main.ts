@@ -7,6 +7,8 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	request,
+	TFolder,
 } from "obsidian";
 import sanitize from "sanitize-filename";
 
@@ -24,21 +26,18 @@ const DEFAULT_SETTINGS: TresselPluginSettings = {
 
 export default class TresselPlugin extends Plugin {
 	settings: TresselPluginSettings;
-	fs: DataAdapter;
 
 	async onload() {
 		await this.loadSettings();
-
 		await this.syncTressel(true);
 		await this.saveSettings();
 
 		// Create a Tressel sync button in the left ribbon.
-		this.addRibbonIcon("sync", "Sync Tressel", (evt: MouseEvent) => {
+		this.addRibbonIcon("sync", "Sync Tressel", async (evt: MouseEvent) => {
 			// Called when the user clicks the button.
-			this.syncTressel().then(() => {
-				this.saveSettings();
-				new Notice("Finished Tressel sync");
-			});
+			await this.syncTressel();
+			await this.saveSettings();
+			new Notice("Finished Tressel sync");
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -53,89 +52,107 @@ export default class TresselPlugin extends Plugin {
 			this.settings.tresselUserToken !==
 			"XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 		) {
-			this.fs = this.app.vault.adapter;
 			// Get the user's tweets and threads by their token
 			try {
-				const userData = await axios.get(
-					`https://us-central1-tressel-646e8.cloudfunctions.net/getUserDataByObsidianToken?token=${this.settings.tresselUserToken}`
+				const userData = JSON.parse(
+					await request({
+						url: `https://us-central1-tressel-646e8.cloudfunctions.net/getUserDataByObsidianToken?token=${this.settings.tresselUserToken}`,
+					})
 				);
 
 				// Create the Tressel folder if it doesn't already exist
-				const tresselFolderExists = await this.fs.exists(
-					normalizePath("/🗃️ Tressel")
-				);
+				const tresselFolder =
+					this.app.vault.getAbstractFileByPath("🗃️ Tressel");
+				const tresselFolderExists = tresselFolder instanceof TFolder;
 
 				if (!tresselFolderExists) {
-					await this.app.vault.createFolder("/🗃️ Tressel");
+					await this.app.vault.createFolder("🗃️ Tressel");
 				}
 
-				if (userData.data.tweets.length !== 0) {
-					for (let tweet of userData.data.tweets) {
+				if (userData.tweets.length !== 0) {
+					for (let tweet of userData.tweets) {
 						// Check if tweets have been added in already
 						if (!this.settings.tweetsToIgnore.includes(tweet.id)) {
 							// Otherwise create new page for them in Tressel directory
-							let template = [
+							let templateArray = [
 								`# ${tweet.text.slice(0, 50)}\n`,
 								`## Metadata\n`,
 								`- Author: [${tweet.author.name}](${tweet.author.url})`,
-								`- Type: Thread`,
+								`- Type: Tweet (#tweet)`,
 								`- URL: ${tweet.url}\n`,
-								`## Thread\n`,
-								`${tweet.text}`,
-							].join("\n");
+								`## Tweet\n`,
+								`${tweet.text}\n`,
+							];
 
-							this.fs
-								.write(
-									`${normalizePath(
-										"/🗃️ Tressel/" +
-											sanitize(tweet.text.slice(0, 50)) +
-											".md"
-									)}`,
-									template
-								)
-								.then(async () => {
-									this.settings.tweetsToIgnore.push(tweet.id);
-								});
+							if (tweet.media) {
+								for (let mediaUrl of tweet.media) {
+									templateArray.push(`![](${mediaUrl})\n`);
+								}
+							}
+
+							let template = templateArray.join("\n");
+
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(tweet.text.slice(0, 50)) +
+									".md",
+								template
+							);
+
+							this.settings.tweetsToIgnore.push(tweet.id);
 						}
 					}
 				}
 
-				if (userData.data.threads.length !== 0) {
-					for (let thread of userData.data.threads) {
+				if (userData.threads.length !== 0) {
+					for (let thread of userData.threads) {
 						// Check if threads have been added in already
 						if (
 							!this.settings.threadsToIgnore.includes(thread.id)
 						) {
 							// Otherwise create new page for them in Tressel directory
-							let template = [
+							let templateArray = [
 								`# ${thread.fullThreadText[0].slice(0, 50)}\n`,
 								`## Metadata\n`,
-								`- Author: [${thread.author.name}](${thread.author.url})`,
-								`- Type: Thread`,
+								`- Author: [${thread.author.name}](https://twitter.com/${thread.author.username})`,
+								`- Type: Thread (#thread)`,
 								`- URL: ${thread.threadUrl}\n`,
 								`## Thread\n`,
-								`${thread.fullThreadText.join("\n\n")}`,
-							].join("\n");
+							];
 
-							this.fs
-								.write(
-									`${normalizePath(
-										"/🗃️ Tressel/" +
-											sanitize(
-												thread.fullThreadText[0].slice(
-													0,
-													50
-												)
-											) +
-											".md"
-									)}`,
-									template
-								)
-								.then(() => {
-									this.settings.threadsToIgnore.push(
-										thread.id
+							for (let tweetId in thread) {
+								if (
+									tweetId !== "author" &&
+									tweetId !== "fullThreadText" &&
+									tweetId !== "id" &&
+									tweetId !== "threadUrl"
+								) {
+									let tweetInThread = thread[tweetId];
+									templateArray.push(
+										`${tweetInThread.text}\n`
 									);
-								});
+									if (tweetInThread.media) {
+										for (let mediaUrl of tweetInThread.media) {
+											templateArray.push(
+												`![](${mediaUrl})\n`
+											);
+										}
+									}
+								}
+							}
+
+							let template = templateArray.join("\n");
+
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(
+										thread.fullThreadText[0].slice(0, 50)
+									) +
+									".md",
+								template
+							);
+
+							this.settings.threadsToIgnore.push(thread.id);
 						}
 					}
 				}
@@ -151,12 +168,11 @@ export default class TresselPlugin extends Plugin {
 		}
 	}
 
-	clearSyncMemory() {
+	async clearSyncMemory() {
 		this.settings.threadsToIgnore = [];
 		this.settings.tweetsToIgnore = [];
-		this.saveSettings().then(() => {
-			new Notice("Cleared Tressel sync memory");
-		});
+		await this.saveSettings();
+		new Notice("Cleared Tressel sync memory");
 	}
 
 	onunload() {}
@@ -210,8 +226,8 @@ class TresselSettingTab extends PluginSettingTab {
 				"Forget what you've already synced from your Tressel library and start from scratch"
 			)
 			.addButton((button) => {
-				button.setButtonText("Clear Sync Memory").onClick(() => {
-					this.plugin.clearSyncMemory();
+				button.setButtonText("Clear Sync Memory").onClick(async () => {
+					await this.plugin.clearSyncMemory();
 				});
 			});
 	}
