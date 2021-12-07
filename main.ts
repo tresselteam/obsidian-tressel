@@ -25,7 +25,6 @@ const DEFAULT_SETTINGS: TresselPluginSettings = {
 
 export default class TresselPlugin extends Plugin {
 	settings: TresselPluginSettings;
-	fs: DataAdapter;
 
 	async onload() {
 		await this.loadSettings();
@@ -54,7 +53,6 @@ export default class TresselPlugin extends Plugin {
 			this.settings.tresselUserToken !==
 			"XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 		) {
-			this.fs = this.app.vault.adapter;
 			// Get the user's tweets and threads by their token
 			try {
 				const userData = JSON.parse(
@@ -64,7 +62,7 @@ export default class TresselPlugin extends Plugin {
 				);
 
 				// Create the Tressel folder if it doesn't already exist
-				const tresselFolderExists = await this.fs.exists(
+				const tresselFolderExists = await this.app.vault.adapter.exists(
 					normalizePath("/🗃️ Tressel")
 				);
 
@@ -87,7 +85,7 @@ export default class TresselPlugin extends Plugin {
 								`${tweet.text}`,
 							].join("\n");
 
-							this.fs
+							this.app.vault.adapter
 								.write(
 									`${normalizePath(
 										"/🗃️ Tressel/" +
@@ -120,7 +118,7 @@ export default class TresselPlugin extends Plugin {
 								`${thread.fullThreadText.join("\n\n")}`,
 							].join("\n");
 
-							this.fs
+							this.app.vault.adapter
 								.write(
 									`${normalizePath(
 										"/🗃️ Tressel/" +
