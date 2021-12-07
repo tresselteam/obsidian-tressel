@@ -7,6 +7,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	request,
 } from "obsidian";
 import sanitize from "sanitize-filename";
 
@@ -56,8 +57,10 @@ export default class TresselPlugin extends Plugin {
 			this.fs = this.app.vault.adapter;
 			// Get the user's tweets and threads by their token
 			try {
-				const userData = await axios.get(
-					`https://us-central1-tressel-646e8.cloudfunctions.net/getUserDataByObsidianToken?token=${this.settings.tresselUserToken}`
+				const userData = JSON.parse(
+					await request({
+						url: `https://us-central1-tressel-646e8.cloudfunctions.net/getUserDataByObsidianToken?token=${this.settings.tresselUserToken}`,
+					})
 				);
 
 				// Create the Tressel folder if it doesn't already exist
@@ -69,8 +72,8 @@ export default class TresselPlugin extends Plugin {
 					await this.app.vault.createFolder("/🗃️ Tressel");
 				}
 
-				if (userData.data.tweets.length !== 0) {
-					for (let tweet of userData.data.tweets) {
+				if (userData.tweets.length !== 0) {
+					for (let tweet of userData.tweets) {
 						// Check if tweets have been added in already
 						if (!this.settings.tweetsToIgnore.includes(tweet.id)) {
 							// Otherwise create new page for them in Tressel directory
@@ -100,8 +103,8 @@ export default class TresselPlugin extends Plugin {
 					}
 				}
 
-				if (userData.data.threads.length !== 0) {
-					for (let thread of userData.data.threads) {
+				if (userData.threads.length !== 0) {
+					for (let thread of userData.threads) {
 						// Check if threads have been added in already
 						if (
 							!this.settings.threadsToIgnore.includes(thread.id)
