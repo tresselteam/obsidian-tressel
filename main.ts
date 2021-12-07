@@ -29,7 +29,6 @@ export default class TresselPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
 		await this.syncTressel(true);
 		await this.saveSettings();
 
@@ -75,15 +74,23 @@ export default class TresselPlugin extends Plugin {
 						// Check if tweets have been added in already
 						if (!this.settings.tweetsToIgnore.includes(tweet.id)) {
 							// Otherwise create new page for them in Tressel directory
-							let template = [
+							let templateArray = [
 								`# ${tweet.text.slice(0, 50)}\n`,
 								`## Metadata\n`,
 								`- Author: [${tweet.author.name}](${tweet.author.url})`,
-								`- Type: Thread`,
+								`- Type: Tweet (#tweet)`,
 								`- URL: ${tweet.url}\n`,
-								`## Thread\n`,
-								`${tweet.text}`,
-							].join("\n");
+								`## Tweet\n`,
+								`${tweet.text}\n`,
+							];
+
+							if (tweet.media) {
+								for (let mediaUrl of tweet.media) {
+									templateArray.push(`![](${mediaUrl})\n`);
+								}
+							}
+
+							let template = templateArray.join("\n");
 
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
@@ -104,15 +111,37 @@ export default class TresselPlugin extends Plugin {
 							!this.settings.threadsToIgnore.includes(thread.id)
 						) {
 							// Otherwise create new page for them in Tressel directory
-							let template = [
+							let templateArray = [
 								`# ${thread.fullThreadText[0].slice(0, 50)}\n`,
 								`## Metadata\n`,
-								`- Author: [${thread.author.name}](${thread.author.url})`,
-								`- Type: Thread`,
+								`- Author: [${thread.author.name}](https://twitter.com/${thread.author.username})`,
+								`- Type: Thread (#thread)`,
 								`- URL: ${thread.threadUrl}\n`,
 								`## Thread\n`,
-								`${thread.fullThreadText.join("\n\n")}`,
-							].join("\n");
+							];
+
+							for (let tweetId in thread) {
+								if (
+									tweetId !== "author" &&
+									tweetId !== "fullThreadText" &&
+									tweetId !== "id" &&
+									tweetId !== "threadUrl"
+								) {
+									let tweetInThread = thread[tweetId];
+									templateArray.push(
+										`${tweetInThread.text}\n`
+									);
+									if (tweetInThread.media) {
+										for (let mediaUrl of tweetInThread.media) {
+											templateArray.push(
+												`![](${mediaUrl})\n`
+											);
+										}
+									}
+								}
+							}
+
+							let template = templateArray.join("\n");
 
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
