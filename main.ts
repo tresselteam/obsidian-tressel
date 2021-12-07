@@ -8,6 +8,7 @@ import {
 	PluginSettingTab,
 	Setting,
 	request,
+	TFolder,
 } from "obsidian";
 import sanitize from "sanitize-filename";
 
@@ -62,12 +63,12 @@ export default class TresselPlugin extends Plugin {
 				);
 
 				// Create the Tressel folder if it doesn't already exist
-				const tresselFolderExists = await this.app.vault.adapter.exists(
-					normalizePath("/🗃️ Tressel")
-				);
+				const tresselFolder =
+					this.app.vault.getAbstractFileByPath("🗃️ Tressel");
+				const tresselFolderExists = tresselFolder instanceof TFolder;
 
 				if (!tresselFolderExists) {
-					await this.app.vault.createFolder("/🗃️ Tressel");
+					await this.app.vault.createFolder("🗃️ Tressel");
 				}
 
 				if (userData.tweets.length !== 0) {
@@ -85,18 +86,14 @@ export default class TresselPlugin extends Plugin {
 								`${tweet.text}`,
 							].join("\n");
 
-							this.app.vault.adapter
-								.write(
-									`${normalizePath(
-										"/🗃️ Tressel/" +
-											sanitize(tweet.text.slice(0, 50)) +
-											".md"
-									)}`,
-									template
-								)
-								.then(async () => {
-									this.settings.tweetsToIgnore.push(tweet.id);
-								});
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(tweet.text.slice(0, 50)) +
+									".md",
+								template
+							);
+
+							this.settings.tweetsToIgnore.push(tweet.id);
 						}
 					}
 				}
@@ -118,25 +115,16 @@ export default class TresselPlugin extends Plugin {
 								`${thread.fullThreadText.join("\n\n")}`,
 							].join("\n");
 
-							this.app.vault.adapter
-								.write(
-									`${normalizePath(
-										"/🗃️ Tressel/" +
-											sanitize(
-												thread.fullThreadText[0].slice(
-													0,
-													50
-												)
-											) +
-											".md"
-									)}`,
-									template
-								)
-								.then(() => {
-									this.settings.threadsToIgnore.push(
-										thread.id
-									);
-								});
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(
+										thread.fullThreadText[0].slice(0, 50)
+									) +
+									".md",
+								template
+							);
+
+							this.settings.threadsToIgnore.push(thread.id);
 						}
 					}
 				}
