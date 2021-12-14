@@ -75,12 +75,14 @@ export default class TresselPlugin extends Plugin {
 						if (!this.settings.tweetsToIgnore.includes(tweet.id)) {
 							// Otherwise create new page for them in Tressel directory
 							let templateArray = [
-								`# ${tweet.text.slice(0, 50)}\n`,
-								`## Metadata\n`,
-								`- Author: [${tweet.author.name}](${tweet.author.url})`,
-								`- Type: Tweet (#tweet)`,
+								`# ${tweet.text
+									.replace(/(\r\n|\n|\r)/gm, " ")
+									.slice(0, 50)}...`,
+								`## Metadata`,
+								`- Author: [${tweet.author.name}](https://twitter.com/${tweet.author.username})`,
+								`- Type: 🐤 Tweet #tweet`,
 								`- URL: ${tweet.url}\n`,
-								`## Tweet\n`,
+								`## Tweet`,
 								`${tweet.text}\n`,
 							];
 
@@ -94,7 +96,13 @@ export default class TresselPlugin extends Plugin {
 
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
-									sanitize(tweet.text.slice(0, 50)) +
+									sanitize(
+										tweet.text
+											.replace(/(\r\n|\n|\r)/gm, " ")
+											.replace("\n\n", " ")
+											.replace("\n\n\n", " ")
+											.slice(0, 50)
+									) +
 									".md",
 								template
 							);
@@ -112,12 +120,14 @@ export default class TresselPlugin extends Plugin {
 						) {
 							// Otherwise create new page for them in Tressel directory
 							let templateArray = [
-								`# ${thread.fullThreadText[0].slice(0, 50)}\n`,
-								`## Metadata\n`,
+								`# ${thread.fullThreadText[0]
+									.replace(/(\r\n|\n|\r)/gm, " ")
+									.slice(0, 50)}...`,
+								`## Metadata`,
 								`- Author: [${thread.author.name}](https://twitter.com/${thread.author.username})`,
-								`- Type: Thread (#thread)`,
+								`- Type: 🧵 Thread #thread`,
 								`- URL: ${thread.threadUrl}\n`,
-								`## Thread\n`,
+								`## Thread`,
 							];
 
 							for (let tweetId in thread) {
@@ -146,7 +156,11 @@ export default class TresselPlugin extends Plugin {
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
 									sanitize(
-										thread.fullThreadText[0].slice(0, 50)
+										thread.fullThreadText[0]
+											.replace(/(\r\n|\n|\r)/gm, " ")
+											.replace("\n\n", " ")
+											.replace("\n\n\n", " ")
+											.slice(0, 50)
 									) +
 									".md",
 								template
