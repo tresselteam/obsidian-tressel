@@ -18,6 +18,8 @@ For feature requests, to report bugs or request help using the plugin, use the H
 
 ## Changelog
 
+- 0.1.1
+  - Fix Markdown template spacing, metadata and title issues
 - 0.1.0
   - Adds images to synced tweets and threads from Tressel
   - Internal improvements:
