@@ -16,12 +16,14 @@ interface TresselPluginSettings {
 	tresselUserToken: string;
 	tweetsToIgnore: Array<string>;
 	threadsToIgnore: Array<string>;
+	conversationsToIgnore: Array<string>;
 }
 
 const DEFAULT_SETTINGS: TresselPluginSettings = {
 	tresselUserToken: "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
 	tweetsToIgnore: [],
 	threadsToIgnore: [],
+	conversationsToIgnore: [],
 };
 
 export default class TresselPlugin extends Plugin {
@@ -170,6 +172,74 @@ export default class TresselPlugin extends Plugin {
 						}
 					}
 				}
+
+				if (userData.conversations.length !== 0) {
+					for (let conversation of userData.conversations) {
+						// Check if conversations have been added in already
+						if (
+							!this.settings.conversationsToIgnore.includes(
+								conversation.id
+							)
+						) {
+							// Otherwise create new page for them in Tressel directory
+							let templateArray = [
+								`# ${conversation.fullConversationText[0]
+									.replace(/(\r\n|\n|\r)/gm, " ")
+									.slice(0, 50)}...`,
+								`## Metadata`,
+								`- Author: [${conversation.author.name}](https://twitter.com/${conversation.author.username})`,
+								`- Type: 💬 Conversation #conversation`,
+								`- URL: ${conversation.conversationUrl}\n`,
+								`## Conversation`,
+							];
+
+							for (let tweetId in conversation) {
+								if (
+									tweetId !== "author" &&
+									tweetId !== "fullConversationText" &&
+									tweetId !== "id" &&
+									tweetId !== "conversationUrl"
+								) {
+									let tweetInConversation =
+										conversation[tweetId];
+									templateArray.push(
+										`**[${tweetInConversation.author.name} (@${tweetInConversation.author.username})](${tweetInConversation.author.url})**\n`
+									);
+									templateArray.push(
+										`${tweetInConversation.text}\n`
+									);
+									if (tweetInConversation.media) {
+										for (let mediaUrl of tweetInConversation.media) {
+											templateArray.push(
+												`![](${mediaUrl})\n`
+											);
+										}
+									}
+									templateArray.push(`---\n`);
+								}
+							}
+
+							let template = templateArray.join("\n");
+
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(
+										conversation.fullConversationText[0]
+											.replace(/(\r\n|\n|\r)/gm, " ")
+											.replace("\n\n", " ")
+											.replace("\n\n\n", " ")
+											.slice(0, 50)
+									) +
+									".md",
+								template
+							);
+
+							this.settings.conversationsToIgnore.push(
+								conversation.id
+							);
+						}
+					}
+				}
 			} catch {
 				new Notice(
 					"Unable to sync from Tressel - invalid token provided"
@@ -185,6 +255,7 @@ export default class TresselPlugin extends Plugin {
 	async clearSyncMemory() {
 		this.settings.threadsToIgnore = [];
 		this.settings.tweetsToIgnore = [];
+		this.settings.conversationsToIgnore = [];
 		await this.saveSettings();
 		new Notice("Cleared Tressel sync memory");
 	}
