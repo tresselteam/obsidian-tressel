@@ -8,7 +8,7 @@ Official Tressel plugin to sync/export your tweets and threads from [Tressel](ht
 2. Copy your personal token from the Obsidian settings section in the [Tressel app](https://app.tressel.xyz) into the Tressel plugin settings in Obsidian
 3. **You're done!** Your tweets & threads will automatically be synced every time you open Obsidian
 4. *Optional - you can click the Sync Tressel button in the side ribbon to manually sync from Tressel*
-5. *Optional - you can click Clear Sync Memory in the plugin settings to resync all your tweets/threads from scratch*
+5. *Optional - you can click Clear Sync Memory in the [Tressel app](https://app.tressel.xyz) settings to resync all your tweets/threads from scratch*
 
 ## Notes
 
