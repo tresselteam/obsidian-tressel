@@ -1,29 +1,20 @@
-import axios from "axios";
 import {
 	App,
-	DataAdapter,
-	normalizePath,
 	Notice,
 	Plugin,
 	PluginSettingTab,
-	Setting,
 	request,
+	Setting,
 	TFolder,
 } from "obsidian";
 import sanitize from "sanitize-filename";
 
 interface TresselPluginSettings {
 	tresselUserToken: string;
-	tweetsToIgnore: Array<string>;
-	threadsToIgnore: Array<string>;
-	conversationsToIgnore: Array<string>;
 }
 
 const DEFAULT_SETTINGS: TresselPluginSettings = {
 	tresselUserToken: "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
-	tweetsToIgnore: [],
-	threadsToIgnore: [],
-	conversationsToIgnore: [],
 };
 
 export default class TresselPlugin extends Plugin {
@@ -58,7 +49,10 @@ export default class TresselPlugin extends Plugin {
 			try {
 				const userData = JSON.parse(
 					await request({
-						url: `https://us-central1-tressel-646e8.cloudfunctions.net/getUserDataByObsidianToken?token=${this.settings.tresselUserToken}`,
+						url: "http://tresselserver-env.eba-7k4pypwk.us-east-1.elasticbeanstalk.com/obsidian/data",
+						headers: {
+							Authorization: `Obsidian ${this.settings.tresselUserToken}`,
+						},
 					})
 				);
 
@@ -73,29 +67,28 @@ export default class TresselPlugin extends Plugin {
 
 				if (userData.tweets.length !== 0) {
 					for (let tweet of userData.tweets) {
-						// Check if tweets have been added in already
-						if (!this.settings.tweetsToIgnore.includes(tweet.id)) {
-							// Otherwise create new page for them in Tressel directory
-							let templateArray = [
-								`# ${tweet.text
-									.replace(/(\r\n|\n|\r)/gm, " ")
-									.slice(0, 50)}...`,
-								`## Metadata`,
-								`- Author: [${tweet.author.name}](https://twitter.com/${tweet.author.username})`,
-								`- Type: 🐤 Tweet #tweet`,
-								`- URL: ${tweet.url}\n`,
-								`## Tweet`,
-								`${tweet.text}\n`,
-							];
+						// Create new page for tweet in Tressel directory
+						let templateArray = [
+							`# ${tweet.text
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.slice(0, 50)}...`,
+							`## Metadata`,
+							`- Author: [${tweet.author.name}](https://twitter.com/${tweet.author.username})`,
+							`- Type: 🐤 Tweet #tweet`,
+							`- URL: ${tweet.url}\n`,
+							`## Tweet`,
+							`${tweet.text}\n`,
+						];
 
-							if (tweet.media) {
-								for (let mediaUrl of tweet.media) {
-									templateArray.push(`![](${mediaUrl})\n`);
-								}
+						if (tweet.media) {
+							for (let mediaEntity of tweet.media) {
+								templateArray.push(`![](${mediaEntity.url})\n`);
 							}
+						}
 
-							let template = templateArray.join("\n");
+						let template = templateArray.join("\n");
 
+						try {
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
 									sanitize(
@@ -108,139 +101,118 @@ export default class TresselPlugin extends Plugin {
 									".md",
 								template
 							);
-
-							this.settings.tweetsToIgnore.push(tweet.id);
+						} catch (error) {
+							console.error(
+								`Error syncing tweet ${tweet.url} -`,
+								error
+							);
 						}
 					}
 				}
 
-				if (userData.threads.length !== 0) {
-					for (let thread of userData.threads) {
-						// Check if threads have been added in already
-						if (
-							!this.settings.threadsToIgnore.includes(thread.id)
-						) {
-							// Otherwise create new page for them in Tressel directory
+				if (userData.tweetCollections.length !== 0) {
+					for (let tweetCollection of userData.tweetCollections) {
+						if (tweetCollection.type === 1) {
+							// It's a thread
+							// Create new page for thread in Tressel directory
 							let templateArray = [
-								`# ${thread.fullThreadText[0]
+								`# ${tweetCollection.tweets[0].text
 									.replace(/(\r\n|\n|\r)/gm, " ")
 									.slice(0, 50)}...`,
 								`## Metadata`,
-								`- Author: [${thread.author.name}](https://twitter.com/${thread.author.username})`,
+								`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
 								`- Type: 🧵 Thread #thread`,
-								`- URL: ${thread.threadUrl}\n`,
+								`- URL: ${tweetCollection.url}\n`,
 								`## Thread`,
 							];
 
-							for (let tweetId in thread) {
-								if (
-									tweetId !== "author" &&
-									tweetId !== "fullThreadText" &&
-									tweetId !== "id" &&
-									tweetId !== "threadUrl"
-								) {
-									let tweetInThread = thread[tweetId];
-									templateArray.push(
-										`${tweetInThread.text}\n`
-									);
-									if (tweetInThread.media) {
-										for (let mediaUrl of tweetInThread.media) {
-											templateArray.push(
-												`![](${mediaUrl})\n`
-											);
-										}
+							for (let tweet of tweetCollection.tweets) {
+								templateArray.push(`${tweet.text}\n`);
+								if (tweet.media) {
+									for (let mediaEntity of tweet.media) {
+										templateArray.push(
+											`![](${mediaEntity.url})\n`
+										);
 									}
 								}
 							}
 
 							let template = templateArray.join("\n");
 
-							await this.app.vault.create(
-								"🗃️ Tressel/" +
-									sanitize(
-										thread.fullThreadText[0]
-											.replace(/(\r\n|\n|\r)/gm, " ")
-											.replace("\n\n", " ")
-											.replace("\n\n\n", " ")
-											.slice(0, 50)
-									) +
-									".md",
-								template
-							);
-
-							this.settings.threadsToIgnore.push(thread.id);
-						}
-					}
-				}
-
-				if (userData.conversations.length !== 0) {
-					for (let conversation of userData.conversations) {
-						// Check if conversations have been added in already
-						if (
-							!this.settings.conversationsToIgnore.includes(
-								conversation.id
-							)
-						) {
-							// Otherwise create new page for them in Tressel directory
+							try {
+								await this.app.vault.create(
+									"🗃️ Tressel/" +
+										sanitize(
+											tweetCollection.tweets[0].text
+												.replace(/(\r\n|\n|\r)/gm, " ")
+												.replace("\n\n", " ")
+												.replace("\n\n\n", " ")
+												.slice(0, 50)
+										) +
+										".md",
+									template
+								);
+							} catch (error) {
+								console.error(
+									`Error syncing thread ${tweetCollection.url} -`,
+									error
+								);
+							}
+						} else if (tweetCollection.type === 2) {
+							// It's a conversation
+							// Create new page for conversation in Tressel directory
 							let templateArray = [
-								`# ${conversation.fullConversationText[0]
+								`# ${tweetCollection.tweets[0].text
 									.replace(/(\r\n|\n|\r)/gm, " ")
 									.slice(0, 50)}...`,
 								`## Metadata`,
-								`- Author: [${conversation.author.name}](https://twitter.com/${conversation.author.username})`,
+								`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
 								`- Type: 💬 Conversation #conversation`,
-								`- URL: ${conversation.conversationUrl}\n`,
+								`- URL: ${tweetCollection.url}\n`,
 								`## Conversation`,
 							];
 
-							for (let tweetId in conversation) {
-								if (
-									tweetId !== "author" &&
-									tweetId !== "fullConversationText" &&
-									tweetId !== "id" &&
-									tweetId !== "conversationUrl"
-								) {
-									let tweetInConversation =
-										conversation[tweetId];
-									templateArray.push(
-										`**[${tweetInConversation.author.name} (@${tweetInConversation.author.username})](${tweetInConversation.author.url})**\n`
-									);
-									templateArray.push(
-										`${tweetInConversation.text}\n`
-									);
-									if (tweetInConversation.media) {
-										for (let mediaUrl of tweetInConversation.media) {
-											templateArray.push(
-												`![](${mediaUrl})\n`
-											);
-										}
+							for (let tweet of tweetCollection.tweets) {
+								templateArray.push(
+									`**[${tweet.author.name} (@${tweet.author.username})](${tweet.author.url})**\n`
+								);
+								templateArray.push(`${tweet.text}\n`);
+								if (tweet.media) {
+									for (let mediaEntity of tweet.media) {
+										templateArray.push(
+											`![](${mediaEntity.url})\n`
+										);
 									}
-									templateArray.push(`---\n`);
 								}
+								templateArray.push(`---\n`);
 							}
 
 							let template = templateArray.join("\n");
 
-							await this.app.vault.create(
-								"🗃️ Tressel/" +
-									sanitize(
-										conversation.fullConversationText[0]
-											.replace(/(\r\n|\n|\r)/gm, " ")
-											.replace("\n\n", " ")
-											.replace("\n\n\n", " ")
-											.slice(0, 50)
-									) +
-									".md",
-								template
-							);
-
-							this.settings.conversationsToIgnore.push(
-								conversation.id
-							);
+							try {
+								await this.app.vault.create(
+									"🗃️ Tressel/" +
+										sanitize(
+											tweetCollection.tweets[0].text
+												.replace(/(\r\n|\n|\r)/gm, " ")
+												.replace("\n\n", " ")
+												.replace("\n\n\n", " ")
+												.slice(0, 50)
+										) +
+										".md",
+									template
+								);
+							} catch (error) {
+								console.error(
+									`Error syncing conversation ${tweetCollection.url} -`,
+									error
+								);
+							}
 						}
 					}
 				}
-			} catch {
+			} catch (error) {
+				console.error("Error while syncing from Tressel -", error);
 				new Notice(
 					"Unable to sync from Tressel - invalid token provided"
 				);
@@ -250,14 +222,6 @@ export default class TresselPlugin extends Plugin {
 				"Unable to sync from Tressel - please fill out your Tressel user token before syncing"
 			);
 		}
-	}
-
-	async clearSyncMemory() {
-		this.settings.threadsToIgnore = [];
-		this.settings.tweetsToIgnore = [];
-		this.settings.conversationsToIgnore = [];
-		await this.saveSettings();
-		new Notice("Cleared Tressel sync memory");
 	}
 
 	onunload() {}
@@ -304,16 +268,5 @@ class TresselSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
-
-		new Setting(containerEl)
-			.setName("Clear Sync Memory")
-			.setDesc(
-				"Forget what you've already synced from your Tressel library and start from scratch"
-			)
-			.addButton((button) => {
-				button.setButtonText("Clear Sync Memory").onClick(async () => {
-					await this.plugin.clearSyncMemory();
-				});
-			});
 	}
 }
