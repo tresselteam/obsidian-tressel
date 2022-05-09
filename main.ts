@@ -49,7 +49,7 @@ export default class TresselPlugin extends Plugin {
 			try {
 				const userData = JSON.parse(
 					await request({
-						url: "http://tresselserver-env.eba-7k4pypwk.us-east-1.elasticbeanstalk.com/obsidian/data",
+						url: "https://api.tressel.xyz/obsidian/data",
 						headers: {
 							Authorization: `Obsidian ${this.settings.tresselUserToken}`,
 						},

@@ -14,10 +14,12 @@ Official Tressel plugin to sync/export your tweets and threads from [Tressel](ht
 
 *The plugin is in the **alpha** stage of development and has currently only been tested on desktop*
 
-For feature requests, to report bugs or request help using the plugin, use the Help & Support form in the [Tressel app](https://app.tressel.xyz)
+For feature requests, to report bugs or request help using the plugin, create an issue or use the Help & Support form in the [Tressel app](https://app.tressel.xyz)
 
 ## Changelog
 
+- 0.1.4
+  - Update API URL
 - 0.1.3
   - Clear Sync Memory now in Tressel dashboard settings (vs previously in plugin settings)
   - Performance improvements in fetching new tweets/tweet collections from Tressel
