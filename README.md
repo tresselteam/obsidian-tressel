@@ -1,23 +1,25 @@
 # Tressel Sync for Obsidian
 
-Official Tressel plugin to sync/export your tweets and threads from [Tressel](https://tressel.xyz) into Obsidian
+Official Tressel plugin to save & export content from Twitter and Reddit in [Tressel](https://tressel.xyz) into Obsidian
 
 ## Instructions
 
 1. Install the plugin
 2. Copy your personal token from the Obsidian settings section in the [Tressel app](https://app.tressel.xyz) into the Tressel plugin settings in Obsidian
-3. **You're done!** Your tweets & threads will automatically be synced every time you open Obsidian
+3. **You're done!** Your Reddit & Twitter content will automatically be synced every time you open Obsidian
 4. *Optional - you can click the Sync Tressel button in the side ribbon to manually sync from Tressel*
-5. *Optional - you can click Clear Sync Memory in the [Tressel app](https://app.tressel.xyz) settings to resync all your tweets/threads from scratch*
+5. *Optional - you can click Clear Sync Memory in the [Tressel app](https://app.tressel.xyz) settings to resync all your content from scratch*
 
 ## Notes
 
 *The plugin is in the **alpha** stage of development and has currently only been tested on desktop*
 
-For feature requests, to report bugs or request help using the plugin, create an issue or use the Help & Support form in the [Tressel app](https://app.tressel.xyz)
+For feature requests, to report bugs or request help using the plugin, please create an issue or use the Help & Support form in the [Tressel app](https://app.tressel.xyz)
 
 ## Changelog
 
+- 0.1.5
+  - Support for syncing Reddit posts and comments from Tressel
 - 0.1.4
   - Update API URL
 - 0.1.3

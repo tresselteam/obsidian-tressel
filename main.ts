@@ -211,6 +211,103 @@ export default class TresselPlugin extends Plugin {
 						}
 					}
 				}
+
+				if (userData.redditComments.length !== 0) {
+					for (let redditComment of userData.redditComments) {
+						// Create new page for redditComment in Tressel directory
+						let templateArray = [
+							`# ${redditComment.text
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.slice(0, 50)}...`,
+							`## Metadata`,
+							`- Subreddit: [r/${redditComment.subreddit}](https://reddit.com/r/${redditComment.subreddit})`,
+							`- Author: [u/${redditComment.author.username}](https://reddit.com/user/${redditComment.author.username})`,
+							`- Type: 👾 Reddit Comment #reddit-comment`,
+							`- URL: ${redditComment.url}\n`,
+							`## Comment`,
+							`${redditComment.text}\n`,
+						];
+
+						let template = templateArray.join("\n");
+
+						try {
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(
+										redditComment.text
+											.replace(/(\r\n|\n|\r)/gm, " ")
+											.replace("\n\n", " ")
+											.replace("\n\n\n", " ")
+											.slice(0, 50)
+									) +
+									".md",
+								template
+							);
+						} catch (error) {
+							console.error(
+								`Error syncing redditComment ${redditComment.url} -`,
+								error
+							);
+						}
+					}
+				}
+
+				if (userData.redditPosts.length !== 0) {
+					for (let redditPost of userData.redditPosts) {
+						// Create new page for redditPost in Tressel directory
+						let templateArray = [
+							`# ${redditPost.title.replace(
+								/(\r\n|\n|\r)/gm,
+								" "
+							)}`,
+							`## Metadata`,
+							`- Subreddit: [r/${redditPost.subreddit}](https://reddit.com/r/${redditPost.subreddit})`,
+							`- Author: [u/${redditPost.author.username}](https://reddit.com/user/${redditPost.author.username})`,
+							`- Type: 👾 Reddit Post #reddit-post`,
+							`- URL: ${redditPost.url}\n`,
+							`## Post`,
+							`${redditPost.text ? redditPost.text + "\n" : ""}`,
+						];
+
+						if (redditPost.media) {
+							for (let mediaEntity of redditPost.media) {
+								if (mediaEntity.type === 1) {
+									// It's an image
+									templateArray.push(
+										`![](${mediaEntity.url})\n`
+									);
+								} else if (mediaEntity.type === 2) {
+									// It's a video
+									templateArray.push(
+										`[Video](${mediaEntity.url})\n`
+									);
+								}
+							}
+						}
+
+						let template = templateArray.join("\n");
+
+						try {
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(
+										redditPost.title
+											.replace(/(\r\n|\n|\r)/gm, " ")
+											.replace("\n\n", " ")
+											.replace("\n\n\n", " ")
+											.slice(0, 50)
+									) +
+									".md",
+								template
+							);
+						} catch (error) {
+							console.error(
+								`Error syncing redditPost ${redditPost.url} -`,
+								error
+							);
+						}
+					}
+				}
 			} catch (error) {
 				console.error("Error while syncing from Tressel -", error);
 				new Notice(
