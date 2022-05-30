@@ -18,6 +18,8 @@ For feature requests, to report bugs or request help using the plugin, please cr
 
 ## Changelog
 
+- 0.1.6
+  - Support for syncing Kindle highlights from Tressel
 - 0.1.5
   - Support for syncing Reddit posts and comments from Tressel
 - 0.1.4

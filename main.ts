@@ -5,6 +5,7 @@ import {
 	PluginSettingTab,
 	request,
 	Setting,
+	TFile,
 	TFolder,
 } from "obsidian";
 import sanitize from "sanitize-filename";
@@ -304,6 +305,76 @@ export default class TresselPlugin extends Plugin {
 							console.error(
 								`Error syncing redditPost ${redditPost.url} -`,
 								error
+							);
+						}
+					}
+				}
+
+				if (userData.kindleHighlights.length !== 0) {
+					for (let kindleHighlight of userData.kindleHighlights) {
+						// Find if there's an existing page for the kindle highlight already in Tressel
+						const bookPage =
+							await this.app.vault.getAbstractFileByPath(
+								"🗃️ Tressel/" +
+									sanitize(
+										kindleHighlight.book.title
+											.replace(/(\r\n|\n|\r)/gm, " ")
+											.replace("\n\n", " ")
+											.replace("\n\n\n", " ")
+											.slice(0, 50)
+									) +
+									".md"
+							);
+
+						let updatedBookPage: TFile;
+						if (bookPage instanceof TFile) {
+							updatedBookPage = bookPage;
+						} else {
+							// Create new page for Book in Tressel directory
+							let templateArray = [
+								`# ${kindleHighlight.book.title.replace(
+									/(\r\n|\n|\r)/gm,
+									" "
+								)}`,
+								`## Metadata`,
+								`- Author: ${kindleHighlight.book.author}`,
+								`- Type: 📕 Kindle Highlight #kindle-highlight`,
+								`- URL: ${kindleHighlight.book.url}\n`,
+								`## Highlights`,
+							];
+
+							let template = templateArray.join("\n");
+
+							try {
+								updatedBookPage = await this.app.vault.create(
+									"🗃️ Tressel/" +
+										sanitize(
+											kindleHighlight.book.title
+												.replace(/(\r\n|\n|\r)/gm, " ")
+												.replace("\n\n", " ")
+												.replace("\n\n\n", " ")
+												.slice(0, 50)
+										) +
+										".md",
+									template
+								);
+							} catch (error) {
+								console.error(
+									`Error syncing kindleHighlight ${kindleHighlight.url} -`,
+									error
+								);
+							}
+						}
+
+						if (updatedBookPage) {
+							let updatedBookContents = await this.app.vault.read(
+								updatedBookPage
+							);
+
+							updatedBookContents += `\n${kindleHighlight.text} - *Location: ${kindleHighlight.location}*\n`;
+							await this.app.vault.modify(
+								updatedBookPage,
+								updatedBookContents
 							);
 						}
 					}
