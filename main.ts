@@ -15,7 +15,7 @@ interface TresselPluginSettings {
 }
 
 const DEFAULT_SETTINGS: TresselPluginSettings = {
-	tresselUserToken: "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+	tresselUserToken: "",
 };
 
 export default class TresselPlugin extends Plugin {
@@ -23,9 +23,13 @@ export default class TresselPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		await this.syncTressel(true);
 		await this.saveSettings();
 
+		this.app.workspace.onLayoutReady(() => this.initializeTressel());
+	}
+
+	async initializeTressel() {
+		await this.syncTressel(true);
 		// Create a Tressel sync button in the left ribbon.
 		this.addRibbonIcon("sync", "Sync Tressel", async (evt: MouseEvent) => {
 			// Called when the user clicks the button.
@@ -42,10 +46,7 @@ export default class TresselPlugin extends Plugin {
 		if (!onload) {
 			new Notice("Starting Tressel sync");
 		}
-		if (
-			this.settings.tresselUserToken !==
-			"XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
-		) {
+		if (this.settings.tresselUserToken !== "") {
 			// Get the user's tweets and threads by their token
 			try {
 				const userData = JSON.parse(
@@ -63,33 +64,42 @@ export default class TresselPlugin extends Plugin {
 				const tresselFolderExists = tresselFolder instanceof TFolder;
 
 				if (!tresselFolderExists) {
-					await this.app.vault.createFolder("🗃️ Tressel");
+					try {
+						await this.app.vault.createFolder("🗃️ Tressel");
+					} catch (error) {
+						console.error(
+							"Error while creating Tressel folder -",
+							error
+						);
+					}
 				}
 
 				if (userData.tweets.length !== 0) {
 					for (let tweet of userData.tweets) {
-						// Create new page for tweet in Tressel directory
-						let templateArray = [
-							`# ${tweet.text
-								.replace(/(\r\n|\n|\r)/gm, " ")
-								.slice(0, 50)}...`,
-							`## Metadata`,
-							`- Author: [${tweet.author.name}](https://twitter.com/${tweet.author.username})`,
-							`- Type: 🐤 Tweet #tweet`,
-							`- URL: ${tweet.url}\n`,
-							`## Tweet`,
-							`${tweet.text}\n`,
-						];
-
-						if (tweet.media) {
-							for (let mediaEntity of tweet.media) {
-								templateArray.push(`![](${mediaEntity.url})\n`);
-							}
-						}
-
-						let template = templateArray.join("\n");
-
 						try {
+							// Create new page for tweet in Tressel directory
+							let templateArray = [
+								`# ${tweet.text
+									.replace(/(\r\n|\n|\r)/gm, " ")
+									.slice(0, 50)}...`,
+								`## Metadata`,
+								`- Author: [${tweet.author.name}](https://twitter.com/${tweet.author.username})`,
+								`- Type: 🐤 Tweet #tweet`,
+								`- URL: ${tweet.url}\n`,
+								`## Tweet`,
+								`${tweet.text}\n`,
+							];
+
+							if (tweet.media) {
+								for (let mediaEntity of tweet.media) {
+									templateArray.push(
+										`![](${mediaEntity.url})\n`
+									);
+								}
+							}
+
+							let template = templateArray.join("\n");
+
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
 									sanitize(
@@ -114,33 +124,33 @@ export default class TresselPlugin extends Plugin {
 				if (userData.tweetCollections.length !== 0) {
 					for (let tweetCollection of userData.tweetCollections) {
 						if (tweetCollection.type === 1) {
-							// It's a thread
-							// Create new page for thread in Tressel directory
-							let templateArray = [
-								`# ${tweetCollection.tweets[0].text
-									.replace(/(\r\n|\n|\r)/gm, " ")
-									.slice(0, 50)}...`,
-								`## Metadata`,
-								`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
-								`- Type: 🧵 Thread #thread`,
-								`- URL: ${tweetCollection.url}\n`,
-								`## Thread`,
-							];
+							try {
+								// It's a thread
+								// Create new page for thread in Tressel directory
+								let templateArray = [
+									`# ${tweetCollection.tweets[0].text
+										.replace(/(\r\n|\n|\r)/gm, " ")
+										.slice(0, 50)}...`,
+									`## Metadata`,
+									`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
+									`- Type: 🧵 Thread #thread`,
+									`- URL: ${tweetCollection.url}\n`,
+									`## Thread`,
+								];
 
-							for (let tweet of tweetCollection.tweets) {
-								templateArray.push(`${tweet.text}\n`);
-								if (tweet.media) {
-									for (let mediaEntity of tweet.media) {
-										templateArray.push(
-											`![](${mediaEntity.url})\n`
-										);
+								for (let tweet of tweetCollection.tweets) {
+									templateArray.push(`${tweet.text}\n`);
+									if (tweet.media) {
+										for (let mediaEntity of tweet.media) {
+											templateArray.push(
+												`![](${mediaEntity.url})\n`
+											);
+										}
 									}
 								}
-							}
 
-							let template = templateArray.join("\n");
+								let template = templateArray.join("\n");
 
-							try {
 								await this.app.vault.create(
 									"🗃️ Tressel/" +
 										sanitize(
@@ -160,37 +170,37 @@ export default class TresselPlugin extends Plugin {
 								);
 							}
 						} else if (tweetCollection.type === 2) {
-							// It's a conversation
-							// Create new page for conversation in Tressel directory
-							let templateArray = [
-								`# ${tweetCollection.tweets[0].text
-									.replace(/(\r\n|\n|\r)/gm, " ")
-									.slice(0, 50)}...`,
-								`## Metadata`,
-								`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
-								`- Type: 💬 Conversation #conversation`,
-								`- URL: ${tweetCollection.url}\n`,
-								`## Conversation`,
-							];
-
-							for (let tweet of tweetCollection.tweets) {
-								templateArray.push(
-									`**[${tweet.author.name} (@${tweet.author.username})](${tweet.author.url})**\n`
-								);
-								templateArray.push(`${tweet.text}\n`);
-								if (tweet.media) {
-									for (let mediaEntity of tweet.media) {
-										templateArray.push(
-											`![](${mediaEntity.url})\n`
-										);
-									}
-								}
-								templateArray.push(`---\n`);
-							}
-
-							let template = templateArray.join("\n");
-
 							try {
+								// It's a conversation
+								// Create new page for conversation in Tressel directory
+								let templateArray = [
+									`# ${tweetCollection.tweets[0].text
+										.replace(/(\r\n|\n|\r)/gm, " ")
+										.slice(0, 50)}...`,
+									`## Metadata`,
+									`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
+									`- Type: 💬 Conversation #conversation`,
+									`- URL: ${tweetCollection.url}\n`,
+									`## Conversation`,
+								];
+
+								for (let tweet of tweetCollection.tweets) {
+									templateArray.push(
+										`**[${tweet.author.name} (@${tweet.author.username})](${tweet.author.url})**\n`
+									);
+									templateArray.push(`${tweet.text}\n`);
+									if (tweet.media) {
+										for (let mediaEntity of tweet.media) {
+											templateArray.push(
+												`![](${mediaEntity.url})\n`
+											);
+										}
+									}
+									templateArray.push(`---\n`);
+								}
+
+								let template = templateArray.join("\n");
+
 								await this.app.vault.create(
 									"🗃️ Tressel/" +
 										sanitize(
@@ -215,23 +225,23 @@ export default class TresselPlugin extends Plugin {
 
 				if (userData.redditComments.length !== 0) {
 					for (let redditComment of userData.redditComments) {
-						// Create new page for redditComment in Tressel directory
-						let templateArray = [
-							`# ${redditComment.text
-								.replace(/(\r\n|\n|\r)/gm, " ")
-								.slice(0, 50)}...`,
-							`## Metadata`,
-							`- Subreddit: [r/${redditComment.subreddit}](https://reddit.com/r/${redditComment.subreddit})`,
-							`- Author: [u/${redditComment.author.username}](https://reddit.com/user/${redditComment.author.username})`,
-							`- Type: 👾 Reddit Comment #reddit-comment`,
-							`- URL: ${redditComment.url}\n`,
-							`## Comment`,
-							`${redditComment.text}\n`,
-						];
-
-						let template = templateArray.join("\n");
-
 						try {
+							// Create new page for redditComment in Tressel directory
+							let templateArray = [
+								`# ${redditComment.text
+									.replace(/(\r\n|\n|\r)/gm, " ")
+									.slice(0, 50)}...`,
+								`## Metadata`,
+								`- Subreddit: [r/${redditComment.subreddit}](https://reddit.com/r/${redditComment.subreddit})`,
+								`- Author: [u/${redditComment.author.username}](https://reddit.com/user/${redditComment.author.username})`,
+								`- Type: 👾 Reddit Comment #reddit-comment`,
+								`- URL: ${redditComment.url}\n`,
+								`## Comment`,
+								`${redditComment.text}\n`,
+							];
+
+							let template = templateArray.join("\n");
+
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
 									sanitize(
@@ -255,40 +265,44 @@ export default class TresselPlugin extends Plugin {
 
 				if (userData.redditPosts.length !== 0) {
 					for (let redditPost of userData.redditPosts) {
-						// Create new page for redditPost in Tressel directory
-						let templateArray = [
-							`# ${redditPost.title.replace(
-								/(\r\n|\n|\r)/gm,
-								" "
-							)}`,
-							`## Metadata`,
-							`- Subreddit: [r/${redditPost.subreddit}](https://reddit.com/r/${redditPost.subreddit})`,
-							`- Author: [u/${redditPost.author.username}](https://reddit.com/user/${redditPost.author.username})`,
-							`- Type: 👾 Reddit Post #reddit-post`,
-							`- URL: ${redditPost.url}\n`,
-							`## Post`,
-							`${redditPost.text ? redditPost.text + "\n" : ""}`,
-						];
+						try {
+							// Create new page for redditPost in Tressel directory
+							let templateArray = [
+								`# ${redditPost.title.replace(
+									/(\r\n|\n|\r)/gm,
+									" "
+								)}`,
+								`## Metadata`,
+								`- Subreddit: [r/${redditPost.subreddit}](https://reddit.com/r/${redditPost.subreddit})`,
+								`- Author: [u/${redditPost.author.username}](https://reddit.com/user/${redditPost.author.username})`,
+								`- Type: 👾 Reddit Post #reddit-post`,
+								`- URL: ${redditPost.url}\n`,
+								`## Post`,
+								`${
+									redditPost.text
+										? redditPost.text + "\n"
+										: ""
+								}`,
+							];
 
-						if (redditPost.media) {
-							for (let mediaEntity of redditPost.media) {
-								if (mediaEntity.type === 1) {
-									// It's an image
-									templateArray.push(
-										`![](${mediaEntity.url})\n`
-									);
-								} else if (mediaEntity.type === 2) {
-									// It's a video
-									templateArray.push(
-										`[Video](${mediaEntity.url})\n`
-									);
+							if (redditPost.media) {
+								for (let mediaEntity of redditPost.media) {
+									if (mediaEntity.type === 1) {
+										// It's an image
+										templateArray.push(
+											`![](${mediaEntity.url})\n`
+										);
+									} else if (mediaEntity.type === 2) {
+										// It's a video
+										templateArray.push(
+											`[Video](${mediaEntity.url})\n`
+										);
+									}
 								}
 							}
-						}
 
-						let template = templateArray.join("\n");
+							let template = templateArray.join("\n");
 
-						try {
 							await this.app.vault.create(
 								"🗃️ Tressel/" +
 									sanitize(
@@ -312,41 +326,10 @@ export default class TresselPlugin extends Plugin {
 
 				if (userData.kindleHighlights.length !== 0) {
 					for (let kindleHighlight of userData.kindleHighlights) {
-						// Find if there's an existing page for the kindle highlight already in Tressel
-						const bookPage =
-							await this.app.vault.getAbstractFileByPath(
-								"🗃️ Tressel/" +
-									sanitize(
-										kindleHighlight.book.title
-											.replace(/(\r\n|\n|\r)/gm, " ")
-											.replace("\n\n", " ")
-											.replace("\n\n\n", " ")
-											.slice(0, 50)
-									) +
-									".md"
-							);
-
-						let updatedBookPage: TFile;
-						if (bookPage instanceof TFile) {
-							updatedBookPage = bookPage;
-						} else {
-							// Create new page for Book in Tressel directory
-							let templateArray = [
-								`# ${kindleHighlight.book.title.replace(
-									/(\r\n|\n|\r)/gm,
-									" "
-								)}`,
-								`## Metadata`,
-								`- Author: ${kindleHighlight.book.author}`,
-								`- Type: 📕 Kindle Highlight #kindle-highlight`,
-								`- URL: ${kindleHighlight.book.url}\n`,
-								`## Highlights`,
-							];
-
-							let template = templateArray.join("\n");
-
-							try {
-								updatedBookPage = await this.app.vault.create(
+						try {
+							// Find if there's an existing page for the kindle highlight already in Tressel
+							const bookPage =
+								await this.app.vault.getAbstractFileByPath(
 									"🗃️ Tressel/" +
 										sanitize(
 											kindleHighlight.book.title
@@ -355,26 +338,67 @@ export default class TresselPlugin extends Plugin {
 												.replace("\n\n\n", " ")
 												.slice(0, 50)
 										) +
-										".md",
-									template
+										".md"
 								);
-							} catch (error) {
-								console.error(
-									`Error syncing kindleHighlight ${kindleHighlight.url} -`,
-									error
+
+							let updatedBookPage: TFile;
+							if (bookPage instanceof TFile) {
+								updatedBookPage = bookPage;
+							} else {
+								// Create new page for Book in Tressel directory
+								let templateArray = [
+									`# ${kindleHighlight.book.title.replace(
+										/(\r\n|\n|\r)/gm,
+										" "
+									)}`,
+									`## Metadata`,
+									`- Author: ${kindleHighlight.book.author}`,
+									`- Type: 📕 Kindle Highlight #kindle-highlight`,
+									`- URL: ${kindleHighlight.book.url}\n`,
+									`## Highlights`,
+								];
+
+								let template = templateArray.join("\n");
+
+								try {
+									updatedBookPage =
+										await this.app.vault.create(
+											"🗃️ Tressel/" +
+												sanitize(
+													kindleHighlight.book.title
+														.replace(
+															/(\r\n|\n|\r)/gm,
+															" "
+														)
+														.replace("\n\n", " ")
+														.replace("\n\n\n", " ")
+														.slice(0, 50)
+												) +
+												".md",
+											template
+										);
+								} catch (error) {
+									console.error(
+										`Error syncing kindleHighlight ${kindleHighlight.url} -`,
+										error
+									);
+								}
+							}
+
+							if (updatedBookPage) {
+								let updatedBookContents =
+									await this.app.vault.read(updatedBookPage);
+
+								updatedBookContents += `\n${kindleHighlight.text} - *Location: ${kindleHighlight.location}*\n`;
+								await this.app.vault.modify(
+									updatedBookPage,
+									updatedBookContents
 								);
 							}
-						}
-
-						if (updatedBookPage) {
-							let updatedBookContents = await this.app.vault.read(
-								updatedBookPage
-							);
-
-							updatedBookContents += `\n${kindleHighlight.text} - *Location: ${kindleHighlight.location}*\n`;
-							await this.app.vault.modify(
-								updatedBookPage,
-								updatedBookContents
+						} catch (error) {
+							console.error(
+								`Error syncing kindleHighlight ${kindleHighlight.url} -`,
+								error
 							);
 						}
 					}
@@ -425,11 +449,11 @@ class TresselSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Tressel User Token")
 			.setDesc(
-				"Get your unique token from the Obsidian settings page in Tressel"
+				"Get your unique token from the Obsidian page in Tressel's integration settings"
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("Enter your token")
+					.setPlaceholder("XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX")
 					.setValue(this.plugin.settings.tresselUserToken)
 					.onChange(async (value) => {
 						this.plugin.settings.tresselUserToken = value;
