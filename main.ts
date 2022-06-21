@@ -53,10 +53,17 @@ export default class TresselPlugin extends Plugin {
 					await request({
 						url: "https://api.tressel.xyz/obsidian/data",
 						headers: {
-							Authorization: `Obsidian ${this.settings.tresselUserToken}`,
+							Authorization: `Access ${this.settings.tresselUserToken}`,
 						},
 					})
 				);
+
+				if (
+					userData.hasOwnProperty("message") &&
+					(userData.message as string).includes("Error")
+				) {
+					throw Error("Tressel - Invalid Token provided");
+				}
 
 				// Create the Tressel folder if it doesn't already exist
 				const tresselFolder =
@@ -74,7 +81,10 @@ export default class TresselPlugin extends Plugin {
 					}
 				}
 
-				if (userData.tweets.length !== 0) {
+				if (
+					userData.hasOwnProperty("tweets") &&
+					userData.tweets.length !== 0
+				) {
 					for (let tweet of userData.tweets) {
 						try {
 							// Create new page for tweet in Tressel directory
@@ -121,7 +131,10 @@ export default class TresselPlugin extends Plugin {
 					}
 				}
 
-				if (userData.tweetCollections.length !== 0) {
+				if (
+					userData.hasOwnProperty("tweetCollections") &&
+					userData.tweetCollections.length !== 0
+				) {
 					for (let tweetCollection of userData.tweetCollections) {
 						if (tweetCollection.type === 1) {
 							try {
@@ -223,7 +236,10 @@ export default class TresselPlugin extends Plugin {
 					}
 				}
 
-				if (userData.redditComments.length !== 0) {
+				if (
+					userData.hasOwnProperty("redditComments") &&
+					userData.redditComments.length !== 0
+				) {
 					for (let redditComment of userData.redditComments) {
 						try {
 							// Create new page for redditComment in Tressel directory
@@ -263,7 +279,10 @@ export default class TresselPlugin extends Plugin {
 					}
 				}
 
-				if (userData.redditPosts.length !== 0) {
+				if (
+					userData.hasOwnProperty("redditPosts") &&
+					userData.redditPosts.length !== 0
+				) {
 					for (let redditPost of userData.redditPosts) {
 						try {
 							// Create new page for redditPost in Tressel directory
@@ -324,7 +343,10 @@ export default class TresselPlugin extends Plugin {
 					}
 				}
 
-				if (userData.kindleHighlights.length !== 0) {
+				if (
+					userData.hasOwnProperty("kindleHighlights") &&
+					userData.kindleHighlights.length !== 0
+				) {
 					for (let kindleHighlight of userData.kindleHighlights) {
 						try {
 							// Find if there's an existing page for the kindle highlight already in Tressel
@@ -398,6 +420,52 @@ export default class TresselPlugin extends Plugin {
 						} catch (error) {
 							console.error(
 								`Error syncing kindleHighlight ${kindleHighlight.url} -`,
+								error
+							);
+						}
+					}
+				}
+
+				if (
+					userData.hasOwnProperty("genericHighlights") &&
+					userData.genericHighlights.length !== 0
+				) {
+					for (let genericHighlight of userData.genericHighlights) {
+						try {
+							// Create new page for redditPost in Tressel directory
+							let templateArray = [
+								`# ${genericHighlight.title.replace(
+									/(\r\n|\n|\r)/gm,
+									" "
+								)}`,
+								`## Metadata`,
+								`- Type: 💬 Highlight #highlight`,
+								`- URL: ${genericHighlight.url}\n`,
+								`## Highlight`,
+								`${
+									genericHighlight.text
+										? genericHighlight.text + "\n"
+										: ""
+								}`,
+							];
+
+							let template = templateArray.join("\n");
+
+							await this.app.vault.create(
+								"🗃️ Tressel/" +
+									sanitize(
+										genericHighlight.title
+											.replace(/(\r\n|\n|\r)/gm, " ")
+											.replace("\n\n", " ")
+											.replace("\n\n\n", " ")
+											.slice(0, 50)
+									) +
+									".md",
+								template
+							);
+						} catch (error) {
+							console.error(
+								`Error syncing genericHighlight ${genericHighlight.url} -`,
 								error
 							);
 						}
