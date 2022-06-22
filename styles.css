@@ -1,3 +1,7 @@
 .body {
 	color: inherit;
 }
+
+.tressel-invalid-token-error {
+	color: red;
+}
