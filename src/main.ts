@@ -96,9 +96,46 @@ export default class TresselPlugin extends Plugin {
 
 				if (!tresselFolderExists) {
 					try {
-						await this.app.vault.createFolder(
-							this.settings.syncFolder
-						);
+						this.app.vault
+							.createFolder(this.settings.syncFolder)
+							.catch();
+						this.app.vault
+							.createFolder(this.settings.syncFolder + "/Twitter")
+							.catch();
+						this.app.vault
+							.createFolder(
+								this.settings.syncFolder + "/Twitter/Tweets"
+							)
+							.catch();
+						this.app.vault
+							.createFolder(
+								this.settings.syncFolder +
+									"/Twitter/Tweet Collections"
+							)
+							.catch();
+						this.app.vault
+							.createFolder(this.settings.syncFolder + "/Reddit")
+							.catch();
+						this.app.vault
+							.createFolder(
+								this.settings.syncFolder + "/Reddit/Posts"
+							)
+							.catch();
+						this.app.vault
+							.createFolder(
+								this.settings.syncFolder + "/Reddit/Comments"
+							)
+							.catch();
+						this.app.vault
+							.createFolder(
+								this.settings.syncFolder + "/Kindle Highlights"
+							)
+							.catch();
+						this.app.vault
+							.createFolder(
+								this.settings.syncFolder + "/Highlights"
+							)
+							.catch();
 					} catch (error) {
 						console.error(
 							"Error while creating Tressel folder -",
@@ -138,7 +175,7 @@ export default class TresselPlugin extends Plugin {
 
 							await this.app.vault.create(
 								this.settings.syncFolder +
-									"/" +
+									"/Twitter/Tweets/" +
 									sanitize(
 										tweet.text
 											.replace(/(\r\n|\n|\r)/gm, " ")
@@ -193,7 +230,7 @@ export default class TresselPlugin extends Plugin {
 
 								await this.app.vault.create(
 									this.settings.syncFolder +
-										"/" +
+										"/Twitter/Tweet Collections/" +
 										sanitize(
 											tweetCollection.tweets[0].text
 												.replace(/(\r\n|\n|\r)/gm, " ")
@@ -244,7 +281,7 @@ export default class TresselPlugin extends Plugin {
 
 								await this.app.vault.create(
 									this.settings.syncFolder +
-										"/" +
+										"/Twitter/Tweet Collections/" +
 										sanitize(
 											tweetCollection.tweets[0].text
 												.replace(/(\r\n|\n|\r)/gm, " ")
@@ -289,7 +326,7 @@ export default class TresselPlugin extends Plugin {
 
 							await this.app.vault.create(
 								this.settings.syncFolder +
-									"/" +
+									"/Reddit/Comments/" +
 									sanitize(
 										redditComment.text
 											.replace(/(\r\n|\n|\r)/gm, " ")
@@ -354,7 +391,7 @@ export default class TresselPlugin extends Plugin {
 
 							await this.app.vault.create(
 								this.settings.syncFolder +
-									"/" +
+									"/Reddit/Posts/" +
 									sanitize(
 										redditPost.title
 											.replace(/(\r\n|\n|\r)/gm, " ")
@@ -384,7 +421,7 @@ export default class TresselPlugin extends Plugin {
 							const bookPage =
 								await this.app.vault.getAbstractFileByPath(
 									this.settings.syncFolder +
-										"/" +
+										"/Kindle Highlights/" +
 										sanitize(
 											kindleHighlight.book.title
 												.replace(/(\r\n|\n|\r)/gm, " ")
@@ -418,7 +455,7 @@ export default class TresselPlugin extends Plugin {
 									updatedBookPage =
 										await this.app.vault.create(
 											this.settings.syncFolder +
-												"/" +
+												"/Kindle Highlights/" +
 												sanitize(
 													kindleHighlight.book.title
 														.replace(
@@ -486,7 +523,7 @@ export default class TresselPlugin extends Plugin {
 
 							await this.app.vault.create(
 								this.settings.syncFolder +
-									"/" +
+									"/Highlights/" +
 									sanitize(
 										genericHighlight.title
 											.replace(/(\r\n|\n|\r)/gm, " ")
