@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-tressel",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"description": "Official Tressel plugin to sync/export various content from the Internet to Obsidian",
 	"main": "main.js",
 	"scripts": {

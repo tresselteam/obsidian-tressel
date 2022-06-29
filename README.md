@@ -18,6 +18,11 @@ For feature requests, to report bugs or request help using the plugin, please cr
 
 ## Changelog
 
+- 0.1.8
+  - Support for generic highlights
+  - Change folder name from Settings
+  - Clear Sync Memory from Settings
+  - Add folders to organize highlights (e.g. tweets go into /Twitter/Tweets subdirectory)
 - 0.1.7
   - Fix random "Invalid token provided" errors
 - 0.1.6
