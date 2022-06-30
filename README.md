@@ -18,6 +18,8 @@ For feature requests, to report bugs or request help using the plugin, please cr
 
 ## Changelog
 
+- 0.1.9
+  - Support for Pocket highlights
 - 0.1.8
   - Support for generic highlights
   - Change folder name from Settings
