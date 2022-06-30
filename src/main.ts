@@ -136,6 +136,10 @@ export default class TresselPlugin extends Plugin {
 								this.settings.syncFolder + "/Highlights"
 							)
 							.catch();
+
+						this.app.vault
+							.createFolder(this.settings.syncFolder + "/Pocket")
+							.catch();
 					} catch (error) {
 						console.error(
 							"Error while creating Tressel folder -",
@@ -537,6 +541,93 @@ export default class TresselPlugin extends Plugin {
 						} catch (error) {
 							console.error(
 								`Error syncing genericHighlight ${genericHighlight.url} -`,
+								error
+							);
+						}
+					}
+				}
+
+				if (
+					userData.hasOwnProperty("pocketHighlights") &&
+					userData.pocketHighlights.length !== 0
+				) {
+					for (let pocketHighlight of userData.pocketHighlights) {
+						try {
+							// Find if there's an existing page for the pocket article already in Tressel
+							const articlePage =
+								await this.app.vault.getAbstractFileByPath(
+									this.settings.syncFolder +
+										"/Pocket/" +
+										sanitize(
+											pocketHighlight.pocketArticle.title
+												.replace(/(\r\n|\n|\r)/gm, " ")
+												.replace("\n\n", " ")
+												.replace("\n\n\n", " ")
+												.slice(0, 50)
+										) +
+										".md"
+								);
+
+							let updatedArticlePage: TFile;
+							if (articlePage instanceof TFile) {
+								updatedArticlePage = articlePage;
+							} else {
+								// Create new page for article in Tressel directory
+								let templateArray = [
+									`# ${pocketHighlight.pocketArticle.title.replace(
+										/(\r\n|\n|\r)/gm,
+										" "
+									)}`,
+									`## Metadata`,
+									`- Author: ${pocketHighlight.pocketArticle.author}`,
+									`- Type: 📑 Pocket Highlights #pocket-highlights`,
+									`- URL: ${pocketHighlight.pocketArticle.url}\n`,
+									`## Highlights`,
+								];
+
+								let template = templateArray.join("\n");
+
+								try {
+									updatedArticlePage =
+										await this.app.vault.create(
+											this.settings.syncFolder +
+												"/Pocket/" +
+												sanitize(
+													pocketHighlight.pocketArticle.title
+														.replace(
+															/(\r\n|\n|\r)/gm,
+															" "
+														)
+														.replace("\n\n", " ")
+														.replace("\n\n\n", " ")
+														.slice(0, 50)
+												) +
+												".md",
+											template
+										);
+								} catch (error) {
+									console.error(
+										`Error syncing pocketHighlight ${pocketHighlight.pocketArticle.url} -`,
+										error
+									);
+								}
+							}
+
+							if (updatedArticlePage) {
+								let updatedArticleContents =
+									await this.app.vault.read(
+										updatedArticlePage
+									);
+
+								updatedArticleContents += `\n${pocketHighlight.text}*\n`;
+								await this.app.vault.modify(
+									updatedArticlePage,
+									updatedArticleContents
+								);
+							}
+						} catch (error) {
+							console.error(
+								`Error syncing pocketHighlight ${pocketHighlight.pocketArticle.url} -`,
 								error
 							);
 						}
