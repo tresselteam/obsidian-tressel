@@ -1,19 +1,20 @@
 import { shell } from "electron";
 import Api from "helpers/api";
 import {
+	createTresselFoldersIfTheyDontExist,
+	syncTresselUserData,
+} from "helpers/sync";
+import {
 	App,
 	debounce,
 	Notice,
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	TFile,
-	TFolder,
 } from "obsidian";
-import sanitize from "sanitize-filename";
 import { FolderSuggest } from "settings/suggesters/FolderSuggester";
 
-interface TresselPluginSettings {
+export interface TresselPluginSettings {
 	tresselAccessToken: string;
 	syncFolder: string;
 }
@@ -74,565 +75,35 @@ export default class TresselPlugin extends Plugin {
 			// Get the user's imported data by their token
 			try {
 				this.apiClient.updateClient(this.settings.tresselAccessToken);
-				const userData = await (
-					await this.apiClient.syncObsidianUserData()
-				).data;
+				let userData = {} as any;
 
-				if (
-					userData.hasOwnProperty("message") &&
-					(userData.message as string).includes("Error")
-				) {
-					new Notice(
-						"Unable to sync from Tressel - Invalid Token provided"
-					);
-					return;
-				}
+				do {
+					userData = await (
+						await this.apiClient.syncObsidianUserData()
+					).data;
 
-				// Create the Tressel folder if it doesn't already exist
-				const tresselFolder = this.app.vault.getAbstractFileByPath(
-					this.settings.syncFolder
-				);
-				const tresselFolderExists = tresselFolder instanceof TFolder;
-
-				if (!tresselFolderExists) {
-					try {
-						this.app.vault
-							.createFolder(this.settings.syncFolder)
-							.catch();
-						this.app.vault
-							.createFolder(this.settings.syncFolder + "/Twitter")
-							.catch();
-						this.app.vault
-							.createFolder(
-								this.settings.syncFolder + "/Twitter/Tweets"
-							)
-							.catch();
-						this.app.vault
-							.createFolder(
-								this.settings.syncFolder +
-									"/Twitter/Tweet Collections"
-							)
-							.catch();
-						this.app.vault
-							.createFolder(this.settings.syncFolder + "/Reddit")
-							.catch();
-						this.app.vault
-							.createFolder(
-								this.settings.syncFolder + "/Reddit/Posts"
-							)
-							.catch();
-						this.app.vault
-							.createFolder(
-								this.settings.syncFolder + "/Reddit/Comments"
-							)
-							.catch();
-						this.app.vault
-							.createFolder(
-								this.settings.syncFolder + "/Kindle Highlights"
-							)
-							.catch();
-						this.app.vault
-							.createFolder(
-								this.settings.syncFolder + "/Highlights"
-							)
-							.catch();
-
-						this.app.vault
-							.createFolder(this.settings.syncFolder + "/Pocket")
-							.catch();
-					} catch (error) {
-						console.error(
-							"Error while creating Tressel folder -",
-							error
+					if (
+						userData.hasOwnProperty("message") &&
+						(userData.message as string).includes("Error")
+					) {
+						new Notice(
+							"Unable to sync from Tressel - Invalid Token provided"
 						);
+						return;
 					}
-				}
 
-				if (
-					userData.hasOwnProperty("tweets") &&
-					userData.tweets.length !== 0
-				) {
-					for (let tweet of userData.tweets) {
-						try {
-							// Create new page for tweet in Tressel directory
-							let templateArray = [
-								`# ${tweet.text
-									.replace(/(\r\n|\n|\r)/gm, " ")
-									.slice(0, 50)}...`,
-								`## Metadata`,
-								`- Author: [${tweet.author.name}](https://twitter.com/${tweet.author.username})`,
-								`- Type: 🐤 Tweet #tweet`,
-								`- URL: ${tweet.url}\n`,
-								`## Tweet`,
-								`${tweet.text}\n`,
-							];
+					// Create the Tressel folder if it doesn't already exist
+					await createTresselFoldersIfTheyDontExist(
+						this.app,
+						this.settings
+					);
 
-							if (tweet.media) {
-								for (let mediaEntity of tweet.media) {
-									templateArray.push(
-										`![](${mediaEntity.url})\n`
-									);
-								}
-							}
-
-							let template = templateArray.join("\n");
-
-							await this.app.vault.create(
-								this.settings.syncFolder +
-									"/Twitter/Tweets/" +
-									sanitize(
-										tweet.text
-											.replace(/(\r\n|\n|\r)/gm, " ")
-											.replace("\n\n", " ")
-											.replace("\n\n\n", " ")
-											.slice(0, 50)
-									) +
-									".md",
-								template
-							);
-						} catch (error) {
-							console.error(
-								`Error syncing tweet ${tweet.url} -`,
-								error
-							);
-						}
-					}
-				}
-
-				if (
-					userData.hasOwnProperty("tweetCollections") &&
-					userData.tweetCollections.length !== 0
-				) {
-					for (let tweetCollection of userData.tweetCollections) {
-						if (tweetCollection.type === 1) {
-							try {
-								// It's a thread
-								// Create new page for thread in Tressel directory
-								let templateArray = [
-									`# ${tweetCollection.tweets[0].text
-										.replace(/(\r\n|\n|\r)/gm, " ")
-										.slice(0, 50)}...`,
-									`## Metadata`,
-									`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
-									`- Type: 🧵 Thread #thread`,
-									`- URL: ${tweetCollection.url}\n`,
-									`## Thread`,
-								];
-
-								for (let tweet of tweetCollection.tweets) {
-									templateArray.push(`${tweet.text}\n`);
-									if (tweet.media) {
-										for (let mediaEntity of tweet.media) {
-											templateArray.push(
-												`![](${mediaEntity.url})\n`
-											);
-										}
-									}
-								}
-
-								let template = templateArray.join("\n");
-
-								await this.app.vault.create(
-									this.settings.syncFolder +
-										"/Twitter/Tweet Collections/" +
-										sanitize(
-											tweetCollection.tweets[0].text
-												.replace(/(\r\n|\n|\r)/gm, " ")
-												.replace("\n\n", " ")
-												.replace("\n\n\n", " ")
-												.slice(0, 50)
-										) +
-										".md",
-									template
-								);
-							} catch (error) {
-								console.error(
-									`Error syncing thread ${tweetCollection.url} -`,
-									error
-								);
-							}
-						} else if (tweetCollection.type === 2) {
-							try {
-								// It's a conversation
-								// Create new page for conversation in Tressel directory
-								let templateArray = [
-									`# ${tweetCollection.tweets[0].text
-										.replace(/(\r\n|\n|\r)/gm, " ")
-										.slice(0, 50)}...`,
-									`## Metadata`,
-									`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
-									`- Type: 💬 Conversation #conversation`,
-									`- URL: ${tweetCollection.url}\n`,
-									`## Conversation`,
-								];
-
-								for (let tweet of tweetCollection.tweets) {
-									templateArray.push(
-										`**[${tweet.author.name} (@${tweet.author.username})](${tweet.author.url})**\n`
-									);
-									templateArray.push(`${tweet.text}\n`);
-									if (tweet.media) {
-										for (let mediaEntity of tweet.media) {
-											templateArray.push(
-												`![](${mediaEntity.url})\n`
-											);
-										}
-									}
-									templateArray.push(`---\n`);
-								}
-
-								let template = templateArray.join("\n");
-
-								await this.app.vault.create(
-									this.settings.syncFolder +
-										"/Twitter/Tweet Collections/" +
-										sanitize(
-											tweetCollection.tweets[0].text
-												.replace(/(\r\n|\n|\r)/gm, " ")
-												.replace("\n\n", " ")
-												.replace("\n\n\n", " ")
-												.slice(0, 50)
-										) +
-										".md",
-									template
-								);
-							} catch (error) {
-								console.error(
-									`Error syncing conversation ${tweetCollection.url} -`,
-									error
-								);
-							}
-						}
-					}
-				}
-
-				if (
-					userData.hasOwnProperty("redditComments") &&
-					userData.redditComments.length !== 0
-				) {
-					for (let redditComment of userData.redditComments) {
-						try {
-							// Create new page for redditComment in Tressel directory
-							let templateArray = [
-								`# ${redditComment.text
-									.replace(/(\r\n|\n|\r)/gm, " ")
-									.slice(0, 50)}...`,
-								`## Metadata`,
-								`- Subreddit: [r/${redditComment.subreddit}](https://reddit.com/r/${redditComment.subreddit})`,
-								`- Author: [u/${redditComment.author.username}](https://reddit.com/user/${redditComment.author.username})`,
-								`- Type: 👾 Reddit Comment #reddit-comment`,
-								`- URL: ${redditComment.url}\n`,
-								`## Comment`,
-								`${redditComment.text}\n`,
-							];
-
-							let template = templateArray.join("\n");
-
-							await this.app.vault.create(
-								this.settings.syncFolder +
-									"/Reddit/Comments/" +
-									sanitize(
-										redditComment.text
-											.replace(/(\r\n|\n|\r)/gm, " ")
-											.replace("\n\n", " ")
-											.replace("\n\n\n", " ")
-											.slice(0, 50)
-									) +
-									".md",
-								template
-							);
-						} catch (error) {
-							console.error(
-								`Error syncing redditComment ${redditComment.url} -`,
-								error
-							);
-						}
-					}
-				}
-
-				if (
-					userData.hasOwnProperty("redditPosts") &&
-					userData.redditPosts.length !== 0
-				) {
-					for (let redditPost of userData.redditPosts) {
-						try {
-							// Create new page for redditPost in Tressel directory
-							let templateArray = [
-								`# ${redditPost.title.replace(
-									/(\r\n|\n|\r)/gm,
-									" "
-								)}`,
-								`## Metadata`,
-								`- Subreddit: [r/${redditPost.subreddit}](https://reddit.com/r/${redditPost.subreddit})`,
-								`- Author: [u/${redditPost.author.username}](https://reddit.com/user/${redditPost.author.username})`,
-								`- Type: 👾 Reddit Post #reddit-post`,
-								`- URL: ${redditPost.url}\n`,
-								`## Post`,
-								`${
-									redditPost.text
-										? redditPost.text + "\n"
-										: ""
-								}`,
-							];
-
-							if (redditPost.media) {
-								for (let mediaEntity of redditPost.media) {
-									if (mediaEntity.type === 1) {
-										// It's an image
-										templateArray.push(
-											`![](${mediaEntity.url})\n`
-										);
-									} else if (mediaEntity.type === 2) {
-										// It's a video
-										templateArray.push(
-											`[Video](${mediaEntity.url})\n`
-										);
-									}
-								}
-							}
-
-							let template = templateArray.join("\n");
-
-							await this.app.vault.create(
-								this.settings.syncFolder +
-									"/Reddit/Posts/" +
-									sanitize(
-										redditPost.title
-											.replace(/(\r\n|\n|\r)/gm, " ")
-											.replace("\n\n", " ")
-											.replace("\n\n\n", " ")
-											.slice(0, 50)
-									) +
-									".md",
-								template
-							);
-						} catch (error) {
-							console.error(
-								`Error syncing redditPost ${redditPost.url} -`,
-								error
-							);
-						}
-					}
-				}
-
-				if (
-					userData.hasOwnProperty("kindleHighlights") &&
-					userData.kindleHighlights.length !== 0
-				) {
-					for (let kindleHighlight of userData.kindleHighlights) {
-						try {
-							// Find if there's an existing page for the kindle highlight already in Tressel
-							const bookPage =
-								await this.app.vault.getAbstractFileByPath(
-									this.settings.syncFolder +
-										"/Kindle Highlights/" +
-										sanitize(
-											kindleHighlight.book.title
-												.replace(/(\r\n|\n|\r)/gm, " ")
-												.replace("\n\n", " ")
-												.replace("\n\n\n", " ")
-												.slice(0, 50)
-										) +
-										".md"
-								);
-
-							let updatedBookPage: TFile;
-							if (bookPage instanceof TFile) {
-								updatedBookPage = bookPage;
-							} else {
-								// Create new page for Book in Tressel directory
-								let templateArray = [
-									`# ${kindleHighlight.book.title.replace(
-										/(\r\n|\n|\r)/gm,
-										" "
-									)}`,
-									`## Metadata`,
-									`- Author: ${kindleHighlight.book.author}`,
-									`- Type: 📕 Kindle Highlight #kindle-highlight`,
-									`- URL: ${kindleHighlight.book.url}\n`,
-									`## Highlights`,
-								];
-
-								let template = templateArray.join("\n");
-
-								try {
-									updatedBookPage =
-										await this.app.vault.create(
-											this.settings.syncFolder +
-												"/Kindle Highlights/" +
-												sanitize(
-													kindleHighlight.book.title
-														.replace(
-															/(\r\n|\n|\r)/gm,
-															" "
-														)
-														.replace("\n\n", " ")
-														.replace("\n\n\n", " ")
-														.slice(0, 50)
-												) +
-												".md",
-											template
-										);
-								} catch (error) {
-									console.error(
-										`Error syncing kindleHighlight ${kindleHighlight.url} -`,
-										error
-									);
-								}
-							}
-
-							if (updatedBookPage) {
-								let updatedBookContents =
-									await this.app.vault.read(updatedBookPage);
-
-								updatedBookContents += `\n${kindleHighlight.text} - *Location: ${kindleHighlight.location}*\n`;
-								await this.app.vault.modify(
-									updatedBookPage,
-									updatedBookContents
-								);
-							}
-						} catch (error) {
-							console.error(
-								`Error syncing kindleHighlight ${kindleHighlight.url} -`,
-								error
-							);
-						}
-					}
-				}
-
-				if (
-					userData.hasOwnProperty("genericHighlights") &&
-					userData.genericHighlights.length !== 0
-				) {
-					for (let genericHighlight of userData.genericHighlights) {
-						try {
-							// Create new page for redditPost in Tressel directory
-							let templateArray = [
-								`# ${genericHighlight.title.replace(
-									/(\r\n|\n|\r)/gm,
-									" "
-								)}`,
-								`## Metadata`,
-								`- Type: 💬 Highlight #highlight`,
-								`- URL: ${genericHighlight.url}\n`,
-								`## Highlight`,
-								`${
-									genericHighlight.text
-										? genericHighlight.text + "\n"
-										: ""
-								}`,
-							];
-
-							let template = templateArray.join("\n");
-
-							await this.app.vault.create(
-								this.settings.syncFolder +
-									"/Highlights/" +
-									sanitize(
-										genericHighlight.title
-											.replace(/(\r\n|\n|\r)/gm, " ")
-											.replace("\n\n", " ")
-											.replace("\n\n\n", " ")
-											.slice(0, 50)
-									) +
-									".md",
-								template
-							);
-						} catch (error) {
-							console.error(
-								`Error syncing genericHighlight ${genericHighlight.url} -`,
-								error
-							);
-						}
-					}
-				}
-
-				if (
-					userData.hasOwnProperty("pocketHighlights") &&
-					userData.pocketHighlights.length !== 0
-				) {
-					for (let pocketHighlight of userData.pocketHighlights) {
-						try {
-							// Find if there's an existing page for the pocket article already in Tressel
-							const articlePage =
-								await this.app.vault.getAbstractFileByPath(
-									this.settings.syncFolder +
-										"/Pocket/" +
-										sanitize(
-											pocketHighlight.pocketArticle.title
-												.replace(/(\r\n|\n|\r)/gm, " ")
-												.replace("\n\n", " ")
-												.replace("\n\n\n", " ")
-												.slice(0, 50)
-										) +
-										".md"
-								);
-
-							let updatedArticlePage: TFile;
-							if (articlePage instanceof TFile) {
-								updatedArticlePage = articlePage;
-							} else {
-								// Create new page for article in Tressel directory
-								let templateArray = [
-									`# ${pocketHighlight.pocketArticle.title.replace(
-										/(\r\n|\n|\r)/gm,
-										" "
-									)}`,
-									`## Metadata`,
-									`- Author: ${pocketHighlight.pocketArticle.author}`,
-									`- Type: 📑 Pocket Highlights #pocket-highlights`,
-									`- URL: ${pocketHighlight.pocketArticle.url}\n`,
-									`## Highlights`,
-								];
-
-								let template = templateArray.join("\n");
-
-								try {
-									updatedArticlePage =
-										await this.app.vault.create(
-											this.settings.syncFolder +
-												"/Pocket/" +
-												sanitize(
-													pocketHighlight.pocketArticle.title
-														.replace(
-															/(\r\n|\n|\r)/gm,
-															" "
-														)
-														.replace("\n\n", " ")
-														.replace("\n\n\n", " ")
-														.slice(0, 50)
-												) +
-												".md",
-											template
-										);
-								} catch (error) {
-									console.error(
-										`Error syncing pocketHighlight ${pocketHighlight.pocketArticle.url} -`,
-										error
-									);
-								}
-							}
-
-							if (updatedArticlePage) {
-								let updatedArticleContents =
-									await this.app.vault.read(
-										updatedArticlePage
-									);
-
-								updatedArticleContents += `\n${pocketHighlight.text}*\n`;
-								await this.app.vault.modify(
-									updatedArticlePage,
-									updatedArticleContents
-								);
-							}
-						} catch (error) {
-							console.error(
-								`Error syncing pocketHighlight ${pocketHighlight.pocketArticle.url} -`,
-								error
-							);
-						}
-					}
-				}
+					await syncTresselUserData(
+						userData,
+						this.app,
+						this.settings
+					);
+				} while (Object.keys(userData).length > 0);
 			} catch (error) {
 				console.error("Error while syncing from Tressel -", error);
 				new Notice(
@@ -706,9 +177,9 @@ class TresselSettingTab extends PluginSettingTab {
 		containerEl.createEl("h2", { text: "Tressel Settings" });
 
 		new Setting(containerEl)
-			.setName("Tressel User Token")
+			.setName("Tressel Access Token")
 			.setDesc(
-				"Get your unique token from the Obsidian/Access Token page in Tressel's integration settings"
+				"Get your unique access token from the Obsidian/Access Token page in Tressel's integration settings"
 			)
 			.addText((text) =>
 				text
@@ -745,21 +216,25 @@ class TresselSettingTab extends PluginSettingTab {
 				},
 			});
 
-			this.loadPreferences();
-		} else {
-			settingsContainer.createEl("p", {
-				text: "Invalid token - please enter the right token to sync your highlights from Tressel",
-				cls: "tressel-invalid-token-error",
+			await this.loadPreferences();
+
+			settingsContainer.createEl("h3", { text: "Help & Support" });
+			settingsContainer.createDiv({
+				attr: {
+					id: "supportContainer",
+				},
 			});
 
+			await this.loadSupport();
+		} else {
 			settingsContainer.createEl("p", {
-				text: "You can find your Tressel access token in the Tressel integration settings page",
+				text: "Invalid token - please enter the right token to sync your highlights from Tressel. You can find your Tressel access token in the Tressel integration settings page",
 				cls: "tressel-invalid-token-error",
 			});
 
 			settingsContainer.createEl(
 				"button",
-				{ text: "Go to integration settings" },
+				{ text: "⚙️ Go to integration settings" },
 				(button) => {
 					button.onClickEvent((e) => {
 						shell.openExternal(
@@ -785,7 +260,7 @@ class TresselSettingTab extends PluginSettingTab {
 				"Press this if you want to re-sync all your highlights from scratch (including ones already synced)"
 			)
 			.addButton((button) => {
-				button.setButtonText("Clear Sync Memory").onClick(() => {
+				button.setButtonText("☁️ Clear Sync Memory").onClick(() => {
 					new Notice("Clearing Obsidian sync memory...");
 					this.plugin.apiClient.updateClient(
 						this.plugin.settings.tresselAccessToken
@@ -825,5 +300,38 @@ class TresselSettingTab extends PluginSettingTab {
 						// this.checkIfFolderNameValid();
 					});
 			});
+
+		preferencesContainer.createEl(
+			"button",
+			{ text: "🔃 Resync" },
+			(button) => {
+				button.onClickEvent((e) => {
+					this.plugin.syncTressel(false);
+				});
+			}
+		);
+	}
+
+	async loadSupport(): Promise<void> {
+		const { containerEl } = this;
+
+		const supportContainer = containerEl.querySelector(
+			"#supportContainer"
+		) as HTMLElement;
+		supportContainer.empty();
+
+		supportContainer.createEl("p", {
+			text: "Need help? Just email us at hello@tressel.xyz or go to the help center down below to submit a ticket or chat with us! Expect a response in 24-48hrs",
+		});
+
+		supportContainer.createEl(
+			"button",
+			{ text: "🔗 Go to Help Center" },
+			(button) => {
+				button.onClickEvent((e) => {
+					shell.openExternal("https://tressel.tawk.help/");
+				});
+			}
+		);
 	}
 }
