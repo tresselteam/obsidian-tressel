@@ -18,6 +18,12 @@ For feature requests, to report bugs or request help using the plugin, please cr
 
 ## Changelog
 
+- 0.2.0
+  - Fix issues syncing large numbers of highlights to Obsidian
+  - Fix Tressel folders not being created before sync
+  - Add Help & Support links and resync button to plugin settings
+  - Internal improvements
+    - Modularize code (by function)
 - 0.1.9
   - Support for Pocket highlights
 - 0.1.8
