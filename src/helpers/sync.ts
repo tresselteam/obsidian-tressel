@@ -2,7 +2,7 @@ import { TresselPluginSettings } from "main";
 import { App, TFile, TFolder } from "obsidian";
 import sanitize from "sanitize-filename";
 
-export const createTresselFoldersIfTheyDontExist = async (
+export const createTresselSyncFolder = async (
 	app: App,
 	settings: TresselPluginSettings
 ) => {
@@ -13,97 +13,23 @@ export const createTresselFoldersIfTheyDontExist = async (
 		try {
 			await app.vault.createFolder(settings.syncFolder);
 		} catch (error) {
-			console.error("Error while creating Tressel folder -", error);
+			console.info("Error creating Tressel sync folder - ", error);
 		}
+	}
+};
 
-		try {
-			await app.vault.createFolder(settings.syncFolder + "/Twitter");
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Twitter folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(
-				settings.syncFolder + "/Twitter/Tweets"
-			);
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Twitter/Tweets folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(
-				settings.syncFolder + "/Twitter/Tweet Collections"
-			);
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Twitter/Tweet Collections folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(settings.syncFolder + "/Reddit");
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Reddit folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(settings.syncFolder + "/Reddit/Posts");
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Reddit/Posts folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(
-				settings.syncFolder + "/Reddit/Comments"
-			);
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Reddit/Comments folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(
-				settings.syncFolder + "/Kindle Highlights"
-			);
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Kindle Highlights folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(settings.syncFolder + "/Highlights");
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Highlights folder -",
-				error
-			);
-		}
-
-		try {
-			await app.vault.createFolder(settings.syncFolder + "/Pocket");
-		} catch (error) {
-			console.error(
-				"Error while creating Tressel /Pocket folder -",
-				error
-			);
-		}
+export const createSyncSubfolder = async (
+	subfolderPath: string,
+	app: App,
+	settings: TresselPluginSettings
+) => {
+	try {
+		await app.vault.createFolder(settings.syncFolder + subfolderPath);
+	} catch (error) {
+		console.info(
+			`Error while creating Tressel ${subfolderPath} folder -`,
+			error
+		);
 	}
 };
 
@@ -113,6 +39,8 @@ export const syncTresselUserData = async (
 	settings: TresselPluginSettings
 ) => {
 	if (userData.hasOwnProperty("tweets") && userData.tweets.length > 0) {
+		await createSyncSubfolder("/Twitter", app, settings);
+		await createSyncSubfolder("/Twitter/Tweets", app, settings);
 		for (let tweet of userData.tweets) {
 			await syncTweetToObsidian(tweet, app, settings);
 		}
@@ -122,6 +50,8 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("tweetCollections") &&
 		userData.tweetCollections.length > 0
 	) {
+		await createSyncSubfolder("/Twitter", app, settings);
+		await createSyncSubfolder("/Twitter/Tweet Collections", app, settings);
 		for (let tweetCollection of userData.tweetCollections) {
 			await syncTweetCollectionToObsidian(tweetCollection, app, settings);
 		}
@@ -131,6 +61,8 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("redditComments") &&
 		userData.redditComments.length > 0
 	) {
+		await createSyncSubfolder("/Reddit", app, settings);
+		await createSyncSubfolder("/Reddit/Comments", app, settings);
 		for (let redditComment of userData.redditComments) {
 			await syncRedditCommentToObsidian(redditComment, app, settings);
 		}
@@ -140,6 +72,8 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("redditPosts") &&
 		userData.redditPosts.length > 0
 	) {
+		await createSyncSubfolder("/Reddit", app, settings);
+		await createSyncSubfolder("/Reddit/Posts", app, settings);
 		for (let redditPost of userData.redditPosts) {
 			await syncRedditPostToObsidian(redditPost, app, settings);
 		}
@@ -149,6 +83,7 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("kindleHighlights") &&
 		userData.kindleHighlights.length > 0
 	) {
+		await createSyncSubfolder("/Kindle Highlights", app, settings);
 		for (let kindleHighlight of userData.kindleHighlights) {
 			await syncKindleHighlightToObsidian(kindleHighlight, app, settings);
 		}
@@ -158,6 +93,7 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("genericHighlights") &&
 		userData.genericHighlights.length > 0
 	) {
+		await createSyncSubfolder("/Highlights", app, settings);
 		for (let genericHighlight of userData.genericHighlights) {
 			await syncGenericHighlightToObsidian(
 				genericHighlight,
@@ -171,6 +107,7 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("pocketHighlights") &&
 		userData.pocketHighlights.length > 0
 	) {
+		await createSyncSubfolder("/Pocket", app, settings);
 		for (let pocketHighlight of userData.pocketHighlights) {
 			await syncPocketHighlightToObsidian(pocketHighlight, app, settings);
 		}

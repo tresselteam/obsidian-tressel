@@ -1,9 +1,6 @@
 import { shell } from "electron";
 import Api from "helpers/api";
-import {
-	createTresselFoldersIfTheyDontExist,
-	syncTresselUserData,
-} from "helpers/sync";
+import { createTresselSyncFolder, syncTresselUserData } from "helpers/sync";
 import {
 	App,
 	debounce,
@@ -93,10 +90,7 @@ export default class TresselPlugin extends Plugin {
 					}
 
 					// Create the Tressel folder if it doesn't already exist
-					await createTresselFoldersIfTheyDontExist(
-						this.app,
-						this.settings
-					);
+					await createTresselSyncFolder(this.app, this.settings);
 
 					await syncTresselUserData(
 						userData,
