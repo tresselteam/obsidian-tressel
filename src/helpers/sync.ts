@@ -1,6 +1,7 @@
 import { TresselPluginSettings } from "main";
 import { App, TFile, TFolder } from "obsidian";
 import sanitize from "sanitize-filename";
+import TurndownService from "turndown";
 
 export const createTresselSyncFolder = async (
 	app: App,
@@ -110,6 +111,20 @@ export const syncTresselUserData = async (
 		await createSyncSubfolder("/Pocket", app, settings);
 		for (let pocketHighlight of userData.pocketHighlights) {
 			await syncPocketHighlightToObsidian(pocketHighlight, app, settings);
+		}
+	}
+
+	if (
+		userData.hasOwnProperty("hackerNewsHighlights") &&
+		userData.hackerNewsHighlights.length > 0
+	) {
+		await createSyncSubfolder("/Hacker News", app, settings);
+		for (let hackerNewsHighlight of userData.hackerNewsHighlights) {
+			await syncHackerNewsHighlightToObsidian(
+				hackerNewsHighlight,
+				app,
+				settings
+			);
 		}
 	}
 };
@@ -538,6 +553,68 @@ const syncPocketHighlightToObsidian = async (
 	} catch (error) {
 		console.error(
 			`Error syncing pocketHighlight ${pocketHighlight.pocketArticle.url} -`,
+			error
+		);
+	}
+};
+
+const syncHackerNewsHighlightToObsidian = async (
+	hackerNewsHighlight: any,
+	app: App,
+	settings: TresselPluginSettings
+) => {
+	try {
+		const turndownService = new TurndownService();
+
+		// Create new page for hackerNewsHighlight in Tressel directory
+		let templateArray = [
+			`# ${
+				hackerNewsHighlight.title
+					? hackerNewsHighlight.title.replace(/(\r\n|\n|\r)/gm, " ")
+					: hackerNewsHighlight.text
+							.substring(0, 80)
+							.replace(/(\r\n|\n|\r)/gm, " ") + "..."
+			}`,
+			`## Metadata`,
+			`- Author: [${hackerNewsHighlight.author}](https://news.ycombinator.com/user?id=${hackerNewsHighlight.author})`,
+			`- Type: 👾 Hacker News Highlight #hacker-news-highlight`,
+			`- URL: https://news.ycombinator.com/item?id=${hackerNewsHighlight.hackerNewsHighlightId}\n`,
+			`## Highlight`,
+			`${
+				hackerNewsHighlight.text
+					? turndownService.turndown(hackerNewsHighlight.text) + "\n"
+					: ""
+			}`,
+		];
+
+		if (hackerNewsHighlight.url) {
+			templateArray.push(`[Link](${hackerNewsHighlight.url})\n`);
+		}
+
+		let template = templateArray.join("\n");
+
+		await app.vault.create(
+			settings.syncFolder +
+				"/Hacker News/" +
+				sanitize(
+					hackerNewsHighlight.title
+						? hackerNewsHighlight.title
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.replace("\n\n", " ")
+								.replace("\n\n\n", " ")
+								.slice(0, 50)
+						: hackerNewsHighlight.text
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.replace("\n\n", " ")
+								.replace("\n\n\n", " ")
+								.slice(0, 50)
+				) +
+				".md",
+			template
+		);
+	} catch (error) {
+		console.error(
+			`Error syncing hackerNewsHighlight ${hackerNewsHighlight.url} -`,
 			error
 		);
 	}

@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-tressel",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Official Tressel plugin to sync/export various content from the Internet to Obsidian",
 	"main": "main.js",
 	"scripts": {
@@ -12,6 +12,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
+		"@types/turndown": "5.0.1",
 		"@typescript-eslint/eslint-plugin": "^5.2.0",
 		"@typescript-eslint/parser": "^5.2.0",
 		"builtin-modules": "^3.2.0",
@@ -24,6 +25,7 @@
 		"@popperjs/core": "^2.11.5",
 		"axios": "^0.24.0",
 		"electron": "^19.0.5",
-		"sanitize-filename": "^1.6.3"
+		"sanitize-filename": "^1.6.3",
+		"turndown": "7.1.1"
 	}
 }

@@ -315,7 +315,7 @@ class TresselSettingTab extends PluginSettingTab {
 		supportContainer.empty();
 
 		supportContainer.createEl("p", {
-			text: "Need help? Just email us at hello@tressel.xyz or go to the help center down below to submit a ticket or chat with us! Expect a response in 24-48hrs",
+			text: "Need help? Just send an email to hello@tressel.xyz or go to the help center down below to submit a ticket or chat! Expect a response in 24-48hrs",
 		});
 
 		supportContainer.createEl(
