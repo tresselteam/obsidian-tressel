@@ -127,6 +127,20 @@ export const syncTresselUserData = async (
 			);
 		}
 	}
+
+	if (
+		userData.hasOwnProperty("instapaperHighlights") &&
+		userData.instapaperHighlights.length > 0
+	) {
+		await createSyncSubfolder("/Instapaper", app, settings);
+		for (let instapaperHighlight of userData.instapaperHighlights) {
+			await syncInstapaperHighlightToObsidian(
+				instapaperHighlight,
+				app,
+				settings
+			);
+		}
+	}
 };
 
 const syncTweetToObsidian = async (
@@ -553,6 +567,85 @@ const syncPocketHighlightToObsidian = async (
 	} catch (error) {
 		console.error(
 			`Error syncing pocketHighlight ${pocketHighlight.pocketArticle.url} -`,
+			error
+		);
+	}
+};
+
+const syncInstapaperHighlightToObsidian = async (
+	instapaperHighlight: any,
+	app: App,
+	settings: TresselPluginSettings
+) => {
+	try {
+		// Find if there's an existing page for the instapaper bookmark already in Tressel
+		const bookmarkPage = await app.vault.getAbstractFileByPath(
+			settings.syncFolder +
+				"/Instapaper/" +
+				sanitize(
+					instapaperHighlight.instapaperBookmark.title
+						.replace(/(\r\n|\n|\r)/gm, " ")
+						.replace("\n\n", " ")
+						.replace("\n\n\n", " ")
+						.slice(0, 50)
+				) +
+				".md"
+		);
+
+		let updatedArticlePage: TFile;
+		if (bookmarkPage instanceof TFile) {
+			updatedArticlePage = bookmarkPage;
+		} else {
+			// Create new page for bookmark in Tressel directory
+			let templateArray = [
+				`# ${instapaperHighlight.instapaperBookmark.title.replace(
+					/(\r\n|\n|\r)/gm,
+					" "
+				)}`,
+				`## Metadata`,
+				`- Type: 📑 Instapaper Highlights #instapaper-highlights`,
+				`- URL: ${instapaperHighlight.instapaperBookmark.url}\n`,
+				`## Highlights/Notes`,
+			];
+
+			let template = templateArray.join("\n");
+
+			try {
+				updatedArticlePage = await app.vault.create(
+					settings.syncFolder +
+						"/Instapaper/" +
+						sanitize(
+							instapaperHighlight.instapaperBookmark.title
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.replace("\n\n", " ")
+								.replace("\n\n\n", " ")
+								.slice(0, 50)
+						) +
+						".md",
+					template
+				);
+			} catch (error) {
+				console.error(
+					`Error syncing instapaperHighlight ${instapaperHighlight.instapaperBookmark.url} -`,
+					error
+				);
+			}
+		}
+
+		if (updatedArticlePage) {
+			let updatedArticleContents = await app.vault.read(
+				updatedArticlePage
+			);
+
+			if (instapaperHighlight.note) {
+				updatedArticleContents += `\n***${instapaperHighlight.note}***\n`;
+			}
+			updatedArticleContents += `\n${instapaperHighlight.text}*\n`;
+			await app.vault.modify(updatedArticlePage, updatedArticleContents);
+		}
+	} catch (error) {
+		console.error(
+			`Error syncing instapaperHighlight ${instapaperHighlight.instapaperBookmark.url} -`,
 			error
 		);
 	}

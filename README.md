@@ -1,8 +1,8 @@
 # Tressel Sync for Obsidian
 
-![](https://www.tressel.xyz/_next/static/media/hero-header.089175d0.png)
+![](https://tressel.xyz/open-graph-image.png)
 
-Official Tressel plugin to save & export content/highlights from **Twitter, Reddit, Kindle, Pocket, Hacker News and more** in [Tressel](https://tressel.xyz) into Obsidian
+Official Tressel plugin to save & export content/highlights from **Twitter, Reddit, Kindle, Pocket, Instapaper, Hacker News and more** in [Tressel](https://tressel.xyz) into Obsidian
 
 ## Instructions
 
@@ -18,6 +18,8 @@ For feature requests, to report bugs or request help using the plugin, please em
 
 ## Changelog
 
+- 0.2.3
+  - Support for Instapaper highlights
 - 0.2.2
   - Support for Hacker News highlights
 - 0.2.1
