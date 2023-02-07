@@ -141,6 +141,20 @@ export const syncTresselUserData = async (
 			);
 		}
 	}
+
+	if (
+		userData.hasOwnProperty("raindropHighlights") &&
+		userData.raindropHighlights.length > 0
+	) {
+		await createSyncSubfolder("/Raindrop", app, settings);
+		for (let raindropHighlight of userData.raindropHighlights) {
+			await syncRaindropHighlightToObsidian(
+				raindropHighlight,
+				app,
+				settings
+			);
+		}
+	}
 };
 
 const syncTweetToObsidian = async (
@@ -646,6 +660,85 @@ const syncInstapaperHighlightToObsidian = async (
 	} catch (error) {
 		console.error(
 			`Error syncing instapaperHighlight ${instapaperHighlight.instapaperBookmark.url} -`,
+			error
+		);
+	}
+};
+
+const syncRaindropHighlightToObsidian = async (
+	raindropHighlight: any,
+	app: App,
+	settings: TresselPluginSettings
+) => {
+	try {
+		// Find if there's an existing page for the raindrop bookmark already in Tressel
+		const raindropPage = await app.vault.getAbstractFileByPath(
+			settings.syncFolder +
+				"/Raindrop/" +
+				sanitize(
+					raindropHighlight.raindrop.title
+						.replace(/(\r\n|\n|\r)/gm, " ")
+						.replace("\n\n", " ")
+						.replace("\n\n\n", " ")
+						.slice(0, 50)
+				) +
+				".md"
+		);
+
+		let updatedArticlePage: TFile;
+		if (raindropPage instanceof TFile) {
+			updatedArticlePage = raindropPage;
+		} else {
+			// Create new page for bookmark in Tressel directory
+			let templateArray = [
+				`# ${raindropHighlight.raindrop.title.replace(
+					/(\r\n|\n|\r)/gm,
+					" "
+				)}`,
+				`## Metadata`,
+				`- Type: 💧 Raindrop Highlights #raindrop-highlights`,
+				`- URL: ${raindropHighlight.raindrop.url}\n`,
+				`## Highlights/Notes`,
+			];
+
+			let template = templateArray.join("\n");
+
+			try {
+				updatedArticlePage = await app.vault.create(
+					settings.syncFolder +
+						"/Raindrop/" +
+						sanitize(
+							raindropHighlight.raindrop.title
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.replace("\n\n", " ")
+								.replace("\n\n\n", " ")
+								.slice(0, 50)
+						) +
+						".md",
+					template
+				);
+			} catch (error) {
+				console.error(
+					`Error syncing raindropHighlight ${raindropHighlight.raindrop.url} -`,
+					error
+				);
+			}
+		}
+
+		if (updatedArticlePage) {
+			let updatedArticleContents = await app.vault.read(
+				updatedArticlePage
+			);
+
+			if (raindropHighlight.note) {
+				updatedArticleContents += `\n***${raindropHighlight.note}***\n`;
+			}
+			updatedArticleContents += `\n${raindropHighlight.text}*\n`;
+			await app.vault.modify(updatedArticlePage, updatedArticleContents);
+		}
+	} catch (error) {
+		console.error(
+			`Error syncing raindropHighlight ${raindropHighlight.raindrop.url} -`,
 			error
 		);
 	}
