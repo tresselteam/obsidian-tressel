@@ -155,6 +155,20 @@ export const syncTresselUserData = async (
 			);
 		}
 	}
+
+	if (
+		userData.hasOwnProperty("hypothesisAnnotations") &&
+		userData.hypothesisAnnotations.length > 0
+	) {
+		await createSyncSubfolder("/Hypothesis", app, settings);
+		for (let hypothesisAnnotation of userData.hypothesisAnnotations) {
+			await syncHypothesisAnnotationToObsidian(
+				hypothesisAnnotation,
+				app,
+				settings
+			);
+		}
+	}
 };
 
 const syncTweetToObsidian = async (
@@ -739,6 +753,85 @@ const syncRaindropHighlightToObsidian = async (
 	} catch (error) {
 		console.error(
 			`Error syncing raindropHighlight ${raindropHighlight.raindrop.url} -`,
+			error
+		);
+	}
+};
+
+const syncHypothesisAnnotationToObsidian = async (
+	hypothesisAnnotation: any,
+	app: App,
+	settings: TresselPluginSettings
+) => {
+	try {
+		// Find if there's an existing page for the hypothesis document already in Tressel
+		const documentPage = await app.vault.getAbstractFileByPath(
+			settings.syncFolder +
+				"/Hypothesis/" +
+				sanitize(
+					hypothesisAnnotation.hypothesisDocument.title
+						.replace(/(\r\n|\n|\r)/gm, " ")
+						.replace("\n\n", " ")
+						.replace("\n\n\n", " ")
+						.slice(0, 50)
+				) +
+				".md"
+		);
+
+		let updatedArticlePage: TFile;
+		if (documentPage instanceof TFile) {
+			updatedArticlePage = documentPage;
+		} else {
+			// Create new page for bookmark in Tressel directory
+			let templateArray = [
+				`# ${hypothesisAnnotation.hypothesisDocument.title.replace(
+					/(\r\n|\n|\r)/gm,
+					" "
+				)}`,
+				`## Metadata`,
+				`- Type: 💧 Hypothes.is Annotations #hypothesis-annotations`,
+				`- URL: ${hypothesisAnnotation.hypothesisDocument.url}\n`,
+				`## Annotations/Highlights`,
+			];
+
+			let template = templateArray.join("\n");
+
+			try {
+				updatedArticlePage = await app.vault.create(
+					settings.syncFolder +
+						"/Hypothesis/" +
+						sanitize(
+							hypothesisAnnotation.hypothesisDocument.title
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.replace("\n\n", " ")
+								.replace("\n\n\n", " ")
+								.slice(0, 50)
+						) +
+						".md",
+					template
+				);
+			} catch (error) {
+				console.error(
+					`Error syncing hypothesisAnnotation ${hypothesisAnnotation.hypothesisDocument.url} -`,
+					error
+				);
+			}
+		}
+
+		if (updatedArticlePage) {
+			let updatedArticleContents = await app.vault.read(
+				updatedArticlePage
+			);
+
+			if (hypothesisAnnotation.note) {
+				updatedArticleContents += `\n***${hypothesisAnnotation.note}***\n`;
+			}
+			updatedArticleContents += `\n${hypothesisAnnotation.text}*\n`;
+			await app.vault.modify(updatedArticlePage, updatedArticleContents);
+		}
+	} catch (error) {
+		console.error(
+			`Error syncing hypothesisAnnotation ${hypothesisAnnotation.raindrop.url} -`,
 			error
 		);
 	}

@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-tressel",
 	"name": "Tressel Sync for Obsidian",
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"minAppVersion": "0.0.1",
 	"description": "Official Tressel plugin to sync/export various content from the Internet to Obsidian",
 	"author": "Tressel",

@@ -18,6 +18,8 @@ For feature requests, to report bugs or request help using the plugin, please em
 
 ## Changelog
 
+- 0.2.5
+  - Support for Hypothes.is annotations/highlights
 - 0.2.4
   - Support for Raindrop highlights
 - 0.2.3
