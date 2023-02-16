@@ -208,8 +208,12 @@ const syncTweetToObsidian = async (
 ) => {
 	try {
 		// Create new page for tweet in Tressel directory
-		let templateArray = [
-			`# ${tweet.text.replace(/(\r\n|\n|\r)/gm, " ").slice(0, 50)}...`,
+		const mainHeading = `# ${tweet.text
+			.replace(/(\r\n|\n|\r)/gm, " ")
+			.slice(0, 50)}...`;
+
+		let templateArray = [];
+		let metadataArray = [
 			`## Metadata`,
 			`- Author: [${tweet.author.name}](https://twitter.com/${tweet.author.username})`,
 			`- Type: 🐤 Tweet #tweet`,
@@ -217,6 +221,13 @@ const syncTweetToObsidian = async (
 			`## Tweet`,
 			`${tweet.text}\n`,
 		];
+
+		if (!settings.removeMainHeading) {
+			templateArray.push(mainHeading);
+			templateArray = templateArray.concat(metadataArray);
+		} else {
+			templateArray = metadataArray;
+		}
 
 		if (tweet.media) {
 			for (let mediaEntity of tweet.media) {
@@ -258,16 +269,25 @@ const syncTweetCollectionToObsidian = async (
 		try {
 			// It's a thread
 			// Create new page for thread in Tressel directory
-			let templateArray = [
-				`# ${tweetCollection.tweets[0].text
-					.replace(/(\r\n|\n|\r)/gm, " ")
-					.slice(0, 50)}...`,
+			const mainHeading = `# ${tweetCollection.tweets[0].text
+				.replace(/(\r\n|\n|\r)/gm, " ")
+				.slice(0, 50)}...`;
+
+			let templateArray = [];
+			let metadataArray = [
 				`## Metadata`,
 				`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
 				`- Type: 🧵 Thread #thread`,
 				`- URL: ${tweetCollection.url}\n`,
 				`## Thread`,
 			];
+
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
 
 			for (let tweet of tweetCollection.tweets) {
 				templateArray.push(`${tweet.text}\n`);
@@ -308,16 +328,25 @@ const syncTweetCollectionToObsidian = async (
 		try {
 			// It's a conversation
 			// Create new page for conversation in Tressel directory
-			let templateArray = [
-				`# ${tweetCollection.tweets[0].text
-					.replace(/(\r\n|\n|\r)/gm, " ")
-					.slice(0, 50)}...`,
+			const mainHeading = `# ${tweetCollection.tweets[0].text
+				.replace(/(\r\n|\n|\r)/gm, " ")
+				.slice(0, 50)}...`;
+
+			let templateArray = [];
+			let metadataArray = [
 				`## Metadata`,
 				`- Author: [${tweetCollection.author.name}](https://twitter.com/${tweetCollection.author.username})`,
 				`- Type: 💬 Conversation #conversation`,
 				`- URL: ${tweetCollection.url}\n`,
 				`## Conversation`,
 			];
+
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
 
 			for (let tweet of tweetCollection.tweets) {
 				templateArray.push(
@@ -368,10 +397,12 @@ const syncRedditCommentToObsidian = async (
 ) => {
 	try {
 		// Create new page for redditComment in Tressel directory
-		let templateArray = [
-			`# ${redditComment.text
-				.replace(/(\r\n|\n|\r)/gm, " ")
-				.slice(0, 50)}...`,
+		const mainHeading = `# ${redditComment.text
+			.replace(/(\r\n|\n|\r)/gm, " ")
+			.slice(0, 50)}...`;
+
+		let templateArray = [];
+		let metadataArray = [
 			`## Metadata`,
 			`- Subreddit: [r/${redditComment.subreddit}](https://reddit.com/r/${redditComment.subreddit})`,
 			`- Author: [u/${redditComment.author.username}](https://reddit.com/user/${redditComment.author.username})`,
@@ -380,6 +411,13 @@ const syncRedditCommentToObsidian = async (
 			`## Comment`,
 			`${redditComment.text}\n`,
 		];
+
+		if (!settings.removeMainHeading) {
+			templateArray.push(mainHeading);
+			templateArray = templateArray.concat(metadataArray);
+		} else {
+			templateArray = metadataArray;
+		}
 
 		let template = templateArray.join("\n");
 
@@ -416,8 +454,14 @@ const syncRedditPostToObsidian = async (
 ) => {
 	try {
 		// Create new page for redditPost in Tressel directory
-		let templateArray = [
-			`# ${redditPost.title.replace(/(\r\n|\n|\r)/gm, " ")}`,
+		const mainHeading = `# ${redditPost.title.replace(
+			/(\r\n|\n|\r)/gm,
+			" "
+		)}`;
+
+		let templateArray = [];
+		let metadataArray = [
+			,
 			`## Metadata`,
 			`- Subreddit: [r/${redditPost.subreddit}](https://reddit.com/r/${redditPost.subreddit})`,
 			`- Author: [u/${redditPost.author.username}](https://reddit.com/user/${redditPost.author.username})`,
@@ -426,6 +470,13 @@ const syncRedditPostToObsidian = async (
 			`## Post`,
 			`${redditPost.text ? redditPost.text + "\n" : ""}`,
 		];
+
+		if (!settings.removeMainHeading) {
+			templateArray.push(mainHeading);
+			templateArray = templateArray.concat(metadataArray);
+		} else {
+			templateArray = metadataArray;
+		}
 
 		if (redditPost.media) {
 			for (let mediaEntity of redditPost.media) {
@@ -494,17 +545,26 @@ const syncKindleHighlightToObsidian = async (
 			updatedBookPage = bookPage;
 		} else {
 			// Create new page for Book in Tressel directory
-			let templateArray = [
-				`# ${kindleHighlight.book.title.replace(
-					/(\r\n|\n|\r)/gm,
-					" "
-				)}`,
+			const mainHeading = `# ${kindleHighlight.book.title.replace(
+				/(\r\n|\n|\r)/gm,
+				" "
+			)}`;
+
+			let templateArray = [];
+			let metadataArray = [
 				`## Metadata`,
 				`- Author: ${kindleHighlight.book.author}`,
 				`- Type: 📕 Kindle Highlight #kindle-highlight`,
 				`- URL: ${kindleHighlight.book.url}\n`,
 				`## Highlights`,
 			];
+
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
 
 			let template = templateArray.join("\n");
 
@@ -551,14 +611,26 @@ const syncGenericHighlightToObsidian = async (
 ) => {
 	try {
 		// Create new page for redditPost in Tressel directory
-		let templateArray = [
-			`# ${genericHighlight.title.replace(/(\r\n|\n|\r)/gm, " ")}`,
+		const mainHeading = `# ${genericHighlight.title.replace(
+			/(\r\n|\n|\r)/gm,
+			" "
+		)}`;
+
+		let templateArray = [];
+		let metadataArray = [
 			`## Metadata`,
 			`- Type: 💬 Highlight #highlight`,
 			`- URL: ${genericHighlight.url}\n`,
 			`## Highlight`,
 			`${genericHighlight.text ? genericHighlight.text + "\n" : ""}`,
 		];
+
+		if (!settings.removeMainHeading) {
+			templateArray.push(mainHeading);
+			templateArray = templateArray.concat(metadataArray);
+		} else {
+			templateArray = metadataArray;
+		}
 
 		let template = templateArray.join("\n");
 
@@ -618,17 +690,26 @@ const syncPocketHighlightToObsidian = async (
 			updatedArticlePage = articlePage;
 		} else {
 			// Create new page for article in Tressel directory
-			let templateArray = [
-				`# ${pocketHighlight.pocketArticle.title.replace(
-					/(\r\n|\n|\r)/gm,
-					" "
-				)}`,
+			const mainHeading = `# ${pocketHighlight.pocketArticle.title.replace(
+				/(\r\n|\n|\r)/gm,
+				" "
+			)}`;
+
+			let templateArray = [];
+			let metadataArray = [
 				`## Metadata`,
 				`- Author: ${pocketHighlight.pocketArticle.author}`,
 				`- Type: 📑 Pocket Highlights #pocket-highlights`,
 				`- URL: ${pocketHighlight.pocketArticle.url}\n`,
 				`## Highlights`,
 			];
+
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
 
 			let template = templateArray.join("\n");
 
@@ -701,16 +782,25 @@ const syncInstapaperHighlightToObsidian = async (
 			updatedArticlePage = bookmarkPage;
 		} else {
 			// Create new page for bookmark in Tressel directory
-			let templateArray = [
-				`# ${instapaperHighlight.instapaperBookmark.title.replace(
-					/(\r\n|\n|\r)/gm,
-					" "
-				)}`,
+			const mainHeading = `# ${instapaperHighlight.instapaperBookmark.title.replace(
+				/(\r\n|\n|\r)/gm,
+				" "
+			)}`;
+
+			let templateArray = [];
+			let metadataArray = [
 				`## Metadata`,
 				`- Type: 📑 Instapaper Highlights #instapaper-highlights`,
 				`- URL: ${instapaperHighlight.instapaperBookmark.url}\n`,
 				`## Highlights/Notes`,
 			];
+
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
 
 			let template = templateArray.join("\n");
 
@@ -784,18 +874,27 @@ const syncRaindropHighlightToObsidian = async (
 		if (raindropPage instanceof TFile) {
 			updatedArticlePage = raindropPage;
 		} else {
-			// Create new page for bookmark in Tressel directory
-			let templateArray = [
-				`# ${raindropHighlight.raindrop.title.replace(
-					/(\r\n|\n|\r)/gm,
-					" "
-				)}`,
+			const mainHeading = `# ${raindropHighlight.raindrop.title.replace(
+				/(\r\n|\n|\r)/gm,
+				" "
+			)}`;
+
+			let templateArray = [];
+			let metadataArray = [
 				`## Metadata`,
 				`- Type: 💧 Raindrop Highlights #raindrop-highlights`,
 				`- URL: ${raindropHighlight.raindrop.url}\n`,
 				`## Highlights/Notes`,
 			];
 
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
+
+			// Create new page for bookmark in Tressel directory
 			let template = templateArray.join("\n");
 
 			try {
@@ -868,18 +967,27 @@ const syncHypothesisAnnotationToObsidian = async (
 		if (documentPage instanceof TFile) {
 			updatedArticlePage = documentPage;
 		} else {
-			// Create new page for bookmark in Tressel directory
-			let templateArray = [
-				`# ${hypothesisAnnotation.hypothesisDocument.title.replace(
-					/(\r\n|\n|\r)/gm,
-					" "
-				)}`,
+			const mainHeading = `# ${hypothesisAnnotation.hypothesisDocument.title.replace(
+				/(\r\n|\n|\r)/gm,
+				" "
+			)}`;
+
+			let templateArray = [];
+			let metadataArray = [
 				`## Metadata`,
 				`- Type: 💧 Hypothes.is Annotations #hypothesis-annotations`,
 				`- URL: ${hypothesisAnnotation.hypothesisDocument.url}\n`,
 				`## Annotations/Highlights`,
 			];
 
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
+
+			// Create new page for bookmark in Tressel directory
 			let template = templateArray.join("\n");
 
 			try {
@@ -932,14 +1040,16 @@ const syncHackerNewsHighlightToObsidian = async (
 		const turndownService = new TurndownService();
 
 		// Create new page for hackerNewsHighlight in Tressel directory
-		let templateArray = [
-			`# ${
-				hackerNewsHighlight.title
-					? hackerNewsHighlight.title.replace(/(\r\n|\n|\r)/gm, " ")
-					: hackerNewsHighlight.text
-							.substring(0, 80)
-							.replace(/(\r\n|\n|\r)/gm, " ") + "..."
-			}`,
+		const mainHeading = `# ${
+			hackerNewsHighlight.title
+				? hackerNewsHighlight.title.replace(/(\r\n|\n|\r)/gm, " ")
+				: hackerNewsHighlight.text
+						.substring(0, 80)
+						.replace(/(\r\n|\n|\r)/gm, " ") + "..."
+		}`;
+
+		let templateArray = [];
+		let metadataArray = [
 			`## Metadata`,
 			`- Author: [${hackerNewsHighlight.author}](https://news.ycombinator.com/user?id=${hackerNewsHighlight.author})`,
 			`- Type: 👾 Hacker News Highlight #hacker-news-highlight`,
@@ -951,6 +1061,13 @@ const syncHackerNewsHighlightToObsidian = async (
 					: ""
 			}`,
 		];
+
+		if (!settings.removeMainHeading) {
+			templateArray.push(mainHeading);
+			templateArray = templateArray.concat(metadataArray);
+		} else {
+			templateArray = metadataArray;
+		}
 
 		if (hackerNewsHighlight.url) {
 			templateArray.push(`[Link](${hackerNewsHighlight.url})\n`);

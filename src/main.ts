@@ -15,12 +15,14 @@ export interface TresselPluginSettings {
 	tresselAccessToken: string;
 	syncFolder: string;
 	subFolders: boolean;
+	removeMainHeading: boolean;
 }
 
 const DEFAULT_SETTINGS: TresselPluginSettings = {
 	tresselAccessToken: "",
 	syncFolder: "🗃️ Tressel",
 	subFolders: true,
+	removeMainHeading: false,
 };
 
 export default class TresselPlugin extends Plugin {
@@ -307,6 +309,20 @@ class TresselSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.subFolders)
 					.onChange((newToggle) => {
 						this.plugin.settings.subFolders = newToggle;
+						this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(preferencesContainer)
+			.setName("Remove Main Title Heading")
+			.setDesc(
+				"Remove the main title heading from synced highlight pages. This is so you don't view two titles when viewing in Obsidian."
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.removeMainHeading)
+					.onChange((newToggle) => {
+						this.plugin.settings.removeMainHeading = newToggle;
 						this.plugin.saveSettings();
 					});
 			});
