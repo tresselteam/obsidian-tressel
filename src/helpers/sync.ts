@@ -40,8 +40,11 @@ export const syncTresselUserData = async (
 	settings: TresselPluginSettings
 ) => {
 	if (userData.hasOwnProperty("tweets") && userData.tweets.length > 0) {
-		await createSyncSubfolder("/Twitter", app, settings);
-		await createSyncSubfolder("/Twitter/Tweets", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Twitter", app, settings);
+			await createSyncSubfolder("/Twitter/Tweets", app, settings);
+		}
+
 		for (let tweet of userData.tweets) {
 			await syncTweetToObsidian(tweet, app, settings);
 		}
@@ -51,8 +54,15 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("tweetCollections") &&
 		userData.tweetCollections.length > 0
 	) {
-		await createSyncSubfolder("/Twitter", app, settings);
-		await createSyncSubfolder("/Twitter/Tweet Collections", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Twitter", app, settings);
+			await createSyncSubfolder(
+				"/Twitter/Tweet Collections",
+				app,
+				settings
+			);
+		}
+
 		for (let tweetCollection of userData.tweetCollections) {
 			await syncTweetCollectionToObsidian(tweetCollection, app, settings);
 		}
@@ -62,8 +72,11 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("redditComments") &&
 		userData.redditComments.length > 0
 	) {
-		await createSyncSubfolder("/Reddit", app, settings);
-		await createSyncSubfolder("/Reddit/Comments", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Reddit", app, settings);
+			await createSyncSubfolder("/Reddit/Comments", app, settings);
+		}
+
 		for (let redditComment of userData.redditComments) {
 			await syncRedditCommentToObsidian(redditComment, app, settings);
 		}
@@ -73,8 +86,11 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("redditPosts") &&
 		userData.redditPosts.length > 0
 	) {
-		await createSyncSubfolder("/Reddit", app, settings);
-		await createSyncSubfolder("/Reddit/Posts", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Reddit", app, settings);
+			await createSyncSubfolder("/Reddit/Posts", app, settings);
+		}
+
 		for (let redditPost of userData.redditPosts) {
 			await syncRedditPostToObsidian(redditPost, app, settings);
 		}
@@ -84,7 +100,9 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("kindleHighlights") &&
 		userData.kindleHighlights.length > 0
 	) {
-		await createSyncSubfolder("/Kindle Highlights", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Kindle Highlights", app, settings);
+		}
 		for (let kindleHighlight of userData.kindleHighlights) {
 			await syncKindleHighlightToObsidian(kindleHighlight, app, settings);
 		}
@@ -94,7 +112,9 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("genericHighlights") &&
 		userData.genericHighlights.length > 0
 	) {
-		await createSyncSubfolder("/Highlights", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Highlights", app, settings);
+		}
 		for (let genericHighlight of userData.genericHighlights) {
 			await syncGenericHighlightToObsidian(
 				genericHighlight,
@@ -108,7 +128,9 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("pocketHighlights") &&
 		userData.pocketHighlights.length > 0
 	) {
-		await createSyncSubfolder("/Pocket", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Pocket", app, settings);
+		}
 		for (let pocketHighlight of userData.pocketHighlights) {
 			await syncPocketHighlightToObsidian(pocketHighlight, app, settings);
 		}
@@ -118,7 +140,9 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("hackerNewsHighlights") &&
 		userData.hackerNewsHighlights.length > 0
 	) {
-		await createSyncSubfolder("/Hacker News", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Hacker News", app, settings);
+		}
 		for (let hackerNewsHighlight of userData.hackerNewsHighlights) {
 			await syncHackerNewsHighlightToObsidian(
 				hackerNewsHighlight,
@@ -132,7 +156,9 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("instapaperHighlights") &&
 		userData.instapaperHighlights.length > 0
 	) {
-		await createSyncSubfolder("/Instapaper", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Instapaper", app, settings);
+		}
 		for (let instapaperHighlight of userData.instapaperHighlights) {
 			await syncInstapaperHighlightToObsidian(
 				instapaperHighlight,
@@ -146,7 +172,9 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("raindropHighlights") &&
 		userData.raindropHighlights.length > 0
 	) {
-		await createSyncSubfolder("/Raindrop", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Raindrop", app, settings);
+		}
 		for (let raindropHighlight of userData.raindropHighlights) {
 			await syncRaindropHighlightToObsidian(
 				raindropHighlight,
@@ -160,7 +188,9 @@ export const syncTresselUserData = async (
 		userData.hasOwnProperty("hypothesisAnnotations") &&
 		userData.hypothesisAnnotations.length > 0
 	) {
-		await createSyncSubfolder("/Hypothesis", app, settings);
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Hypothesis", app, settings);
+		}
 		for (let hypothesisAnnotation of userData.hypothesisAnnotations) {
 			await syncHypothesisAnnotationToObsidian(
 				hypothesisAnnotation,
@@ -196,9 +226,14 @@ const syncTweetToObsidian = async (
 
 		let template = templateArray.join("\n");
 
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Twitter/Tweets/";
+		}
+
 		await app.vault.create(
 			settings.syncFolder +
-				"/Twitter/Tweets/" +
+				folderString +
 				sanitize(
 					tweet.text
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -245,9 +280,14 @@ const syncTweetCollectionToObsidian = async (
 
 			let template = templateArray.join("\n");
 
+			let folderString = "/";
+			if (settings.subFolders) {
+				folderString = "/Twitter/Tweet Collections/";
+			}
+
 			await app.vault.create(
 				settings.syncFolder +
-					"/Twitter/Tweet Collections/" +
+					folderString +
 					sanitize(
 						tweetCollection.tweets[0].text
 							.replace(/(\r\n|\n|\r)/gm, " ")
@@ -294,9 +334,14 @@ const syncTweetCollectionToObsidian = async (
 
 			let template = templateArray.join("\n");
 
+			let folderString = "/";
+			if (settings.subFolders) {
+				folderString = "/Twitter/Tweet Collections/";
+			}
+
 			await app.vault.create(
 				settings.syncFolder +
-					"/Twitter/Tweet Collections/" +
+					folderString +
 					sanitize(
 						tweetCollection.tweets[0].text
 							.replace(/(\r\n|\n|\r)/gm, " ")
@@ -338,9 +383,14 @@ const syncRedditCommentToObsidian = async (
 
 		let template = templateArray.join("\n");
 
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Reddit/Comments/";
+		}
+
 		await app.vault.create(
 			settings.syncFolder +
-				"/Reddit/Comments/" +
+				folderString +
 				sanitize(
 					redditComment.text
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -391,9 +441,14 @@ const syncRedditPostToObsidian = async (
 
 		let template = templateArray.join("\n");
 
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Reddit/Posts/";
+		}
+
 		await app.vault.create(
 			settings.syncFolder +
-				"/Reddit/Posts/" +
+				folderString +
 				sanitize(
 					redditPost.title
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -416,9 +471,14 @@ const syncKindleHighlightToObsidian = async (
 ) => {
 	try {
 		// Find if there's an existing page for the kindle highlight already in Tressel
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Kindle Highlights/";
+		}
+
 		const bookPage = await app.vault.getAbstractFileByPath(
 			settings.syncFolder +
-				"/Kindle Highlights/" +
+				folderString +
 				sanitize(
 					kindleHighlight.book.title
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -451,7 +511,7 @@ const syncKindleHighlightToObsidian = async (
 			try {
 				updatedBookPage = await app.vault.create(
 					settings.syncFolder +
-						"/Kindle Highlights/" +
+						folderString +
 						sanitize(
 							kindleHighlight.book.title
 								.replace(/(\r\n|\n|\r)/gm, " ")
@@ -502,9 +562,14 @@ const syncGenericHighlightToObsidian = async (
 
 		let template = templateArray.join("\n");
 
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Highlights/";
+		}
+
 		await app.vault.create(
 			settings.syncFolder +
-				"/Highlights/" +
+				folderString +
 				sanitize(
 					genericHighlight.title
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -530,9 +595,14 @@ const syncPocketHighlightToObsidian = async (
 ) => {
 	try {
 		// Find if there's an existing page for the pocket article already in Tressel
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Pocket/";
+		}
+
 		const articlePage = await app.vault.getAbstractFileByPath(
 			settings.syncFolder +
-				"/Pocket/" +
+				folderString +
 				sanitize(
 					pocketHighlight.pocketArticle.title
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -565,7 +635,7 @@ const syncPocketHighlightToObsidian = async (
 			try {
 				updatedArticlePage = await app.vault.create(
 					settings.syncFolder +
-						"/Pocket/" +
+						folderString +
 						sanitize(
 							pocketHighlight.pocketArticle.title
 								.replace(/(\r\n|\n|\r)/gm, " ")
@@ -607,9 +677,15 @@ const syncInstapaperHighlightToObsidian = async (
 ) => {
 	try {
 		// Find if there's an existing page for the instapaper bookmark already in Tressel
+
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Instapaper/";
+		}
+
 		const bookmarkPage = await app.vault.getAbstractFileByPath(
 			settings.syncFolder +
-				"/Instapaper/" +
+				folderString +
 				sanitize(
 					instapaperHighlight.instapaperBookmark.title
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -641,7 +717,7 @@ const syncInstapaperHighlightToObsidian = async (
 			try {
 				updatedArticlePage = await app.vault.create(
 					settings.syncFolder +
-						"/Instapaper/" +
+						folderString +
 						sanitize(
 							instapaperHighlight.instapaperBookmark.title
 								.replace(/(\r\n|\n|\r)/gm, " ")
@@ -686,9 +762,14 @@ const syncRaindropHighlightToObsidian = async (
 ) => {
 	try {
 		// Find if there's an existing page for the raindrop bookmark already in Tressel
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Raindrop/";
+		}
+
 		const raindropPage = await app.vault.getAbstractFileByPath(
 			settings.syncFolder +
-				"/Raindrop/" +
+				folderString +
 				sanitize(
 					raindropHighlight.raindrop.title
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -720,7 +801,7 @@ const syncRaindropHighlightToObsidian = async (
 			try {
 				updatedArticlePage = await app.vault.create(
 					settings.syncFolder +
-						"/Raindrop/" +
+						folderString +
 						sanitize(
 							raindropHighlight.raindrop.title
 								.replace(/(\r\n|\n|\r)/gm, " ")
@@ -765,9 +846,14 @@ const syncHypothesisAnnotationToObsidian = async (
 ) => {
 	try {
 		// Find if there's an existing page for the hypothesis document already in Tressel
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Hypothesis/";
+		}
+
 		const documentPage = await app.vault.getAbstractFileByPath(
 			settings.syncFolder +
-				"/Hypothesis/" +
+				folderString +
 				sanitize(
 					hypothesisAnnotation.hypothesisDocument.title
 						.replace(/(\r\n|\n|\r)/gm, " ")
@@ -799,7 +885,7 @@ const syncHypothesisAnnotationToObsidian = async (
 			try {
 				updatedArticlePage = await app.vault.create(
 					settings.syncFolder +
-						"/Hypothesis/" +
+						folderString +
 						sanitize(
 							hypothesisAnnotation.hypothesisDocument.title
 								.replace(/(\r\n|\n|\r)/gm, " ")
@@ -872,9 +958,14 @@ const syncHackerNewsHighlightToObsidian = async (
 
 		let template = templateArray.join("\n");
 
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Hacker News/";
+		}
+
 		await app.vault.create(
 			settings.syncFolder +
-				"/Hacker News/" +
+				folderString +
 				sanitize(
 					hackerNewsHighlight.title
 						? hackerNewsHighlight.title

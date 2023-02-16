@@ -14,11 +14,13 @@ import { FolderSuggest } from "settings/suggesters/FolderSuggester";
 export interface TresselPluginSettings {
 	tresselAccessToken: string;
 	syncFolder: string;
+	subFolders: boolean;
 }
 
 const DEFAULT_SETTINGS: TresselPluginSettings = {
 	tresselAccessToken: "",
 	syncFolder: "🗃️ Tressel",
+	subFolders: true,
 };
 
 export default class TresselPlugin extends Plugin {
@@ -292,6 +294,20 @@ class TresselSettingTab extends PluginSettingTab {
 						this.plugin.settings.syncFolder = newFolder;
 						this.plugin.saveSettings();
 						// this.checkIfFolderNameValid();
+					});
+			});
+
+		new Setting(preferencesContainer)
+			.setName("Subfolder Organization")
+			.setDesc(
+				"Sync into separate folders based on type. For example, Twitter threads will be saved to /Twitter/Tweet Collections. Leave this off if you want a flat file structure."
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.settings.subFolders)
+					.onChange((newToggle) => {
+						this.plugin.settings.subFolders = newToggle;
+						this.plugin.saveSettings();
 					});
 			});
 
