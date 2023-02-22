@@ -184,6 +184,15 @@ export const syncTresselUserData = async (
 		}
 	}
 
+	if (userData.hasOwnProperty("raindrops") && userData.raindrops.length > 0) {
+		if (settings.subFolders) {
+			await createSyncSubfolder("/Raindrop", app, settings);
+		}
+		for (let raindrop of userData.raindrops) {
+			await syncRaindropToObsidian(raindrop, app, settings);
+		}
+	}
+
 	if (
 		userData.hasOwnProperty("hypothesisAnnotations") &&
 		userData.hypothesisAnnotations.length > 0
@@ -935,6 +944,84 @@ const syncRaindropHighlightToObsidian = async (
 			`Error syncing raindropHighlight ${raindropHighlight.raindrop.url} -`,
 			error
 		);
+	}
+};
+
+const syncRaindropToObsidian = async (
+	raindrop: any,
+	app: App,
+	settings: TresselPluginSettings
+) => {
+	try {
+		// Find if there's an existing page for the raindrop bookmark already in Tressel
+		let folderString = "/";
+		if (settings.subFolders) {
+			folderString = "/Raindrop/";
+		}
+
+		const raindropPage = await app.vault.getAbstractFileByPath(
+			settings.syncFolder +
+				folderString +
+				sanitize(
+					raindrop.title
+						.replace(/(\r\n|\n|\r)/gm, " ")
+						.replace("\n\n", " ")
+						.replace("\n\n\n", " ")
+						.slice(0, 50)
+				) +
+				".md"
+		);
+
+		let updatedArticlePage: TFile;
+		if (raindropPage instanceof TFile) {
+			updatedArticlePage = raindropPage;
+		} else {
+			const mainHeading = `# ${raindrop.title.replace(
+				/(\r\n|\n|\r)/gm,
+				" "
+			)}`;
+
+			let templateArray = [];
+			let metadataArray = [
+				`## Metadata`,
+				`- Type: 💧 Raindrop Highlights #raindrop-highlights`,
+				`- URL: ${raindrop.url}\n`,
+				`## Highlights/Notes`,
+			];
+
+			if (!settings.removeMainHeading) {
+				templateArray.push(mainHeading);
+				templateArray = templateArray.concat(metadataArray);
+			} else {
+				templateArray = metadataArray;
+			}
+
+			// Create new page for bookmark in Tressel directory
+			let template = templateArray.join("\n");
+
+			try {
+				updatedArticlePage = await app.vault.create(
+					settings.syncFolder +
+						folderString +
+						sanitize(
+							raindrop.title
+								.replace(/(\r\n|\n|\r)/gm, " ")
+								.replace("\n\n", " ")
+								.replace("\n\n\n", " ")
+								.slice(0, 50)
+						) +
+						".md",
+					template
+				);
+			} catch (error) {
+				console.error(
+					`Error syncing raindrop ${raindrop.url} -`,
+					error
+				);
+			}
+		}
+	} catch (error) {
+		console.error(`Error syncing raindrop ${raindrop.url} -`, error);
 	}
 };
 

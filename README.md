@@ -18,6 +18,8 @@ For feature requests, to report bugs or request help using the plugin, please em
 
 ## Changelog
 
+- 0.2.7
+  - Support for Raindrops (i.e. links/bookmarks)
 - 0.2.6
   - Added Subfolder organization preference
   - Added Remove main title heading from highlights preference
