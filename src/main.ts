@@ -236,7 +236,7 @@ class TresselSettingTab extends PluginSettingTab {
 				(button) => {
 					button.onClickEvent((e) => {
 						shell.openExternal(
-							"https://app.tressel.xyz/settings/integrations/access-token"
+							"https://app.tressel.xyz/connect/obsidian"
 						);
 					});
 				}
