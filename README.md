@@ -17,7 +17,8 @@ Official Tressel plugin to save & export content/highlights from **Twitter, Redd
 For feature requests, to report bugs or request help using the plugin, please email hello@tressel.xyz, create an issue or use the Help & Support form in the [Tressel app](https://app.tressel.xyz)
 
 ## Changelog
-
+- 0.2.8
+  - Updated some broken links
 - 0.2.7
   - Support for Raindrops (i.e. links/bookmarks)
 - 0.2.6
