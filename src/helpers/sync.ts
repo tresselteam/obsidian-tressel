@@ -648,17 +648,17 @@ const syncGenericHighlightToObsidian = async (
 			folderString = "/Highlights/";
 		}
 
+		const highlightPath =
+			sanitize(
+				genericHighlight.title
+					.replace(/(\r\n|\n|\r)/gm, " ")
+					.replace("\n\n", " ")
+					.replace("\n\n\n", " ")
+					.slice(0, 50)
+			) + ".md";
+
 		await app.vault.create(
-			settings.syncFolder +
-				folderString +
-				sanitize(
-					genericHighlight.title
-						.replace(/(\r\n|\n|\r)/gm, " ")
-						.replace("\n\n", " ")
-						.replace("\n\n\n", " ")
-						.slice(0, 50)
-				) +
-				".md",
+			settings.syncFolder + folderString + highlightPath,
 			template
 		);
 	} catch (error) {

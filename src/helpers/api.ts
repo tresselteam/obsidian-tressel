@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestHeaders } from "axios";
+import { API_BASE_URL } from "env";
 
 class Api {
 	tresselAccessToken: string | null;
@@ -6,7 +7,7 @@ class Api {
 	apiBaseUrl: string;
 
 	constructor(tresselAccessToken: string) {
-		this.apiBaseUrl = "https://api.tressel.xyz";
+		this.apiBaseUrl = API_BASE_URL;
 		this.tresselAccessToken = tresselAccessToken;
 
 		const headers: AxiosRequestHeaders = {
