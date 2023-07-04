@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestHeaders } from "axios";
 import { API_BASE_URL } from "env";
 
-class Api {
+export class LegacyApi {
 	tresselAccessToken: string | null;
 	client: AxiosInstance;
 	apiBaseUrl: string;
@@ -58,5 +58,3 @@ class Api {
 		return this.client.get("/obsidian/clear-sync-memory");
 	};
 }
-
-export default Api;

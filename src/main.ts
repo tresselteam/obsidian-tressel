@@ -1,15 +1,21 @@
+import { ApiClient, createApi } from "api";
 import { shell } from "electron";
-import Api from "helpers/api";
-import { createTresselSyncFolder, syncTresselUserData } from "helpers/sync";
+import { LegacyApi } from "helpers/legacy-api";
+import {
+	createTresselSyncFolder,
+	syncTresselUserData,
+} from "helpers/legacy-sync";
 import {
 	App,
-	debounce,
 	Notice,
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	debounce,
 } from "obsidian";
+
 import { FolderSuggest } from "settings/suggesters/FolderSuggester";
+import { syncClippings } from "sync-engine";
 
 export interface TresselPluginSettings {
 	tresselAccessToken: string;
@@ -29,7 +35,9 @@ export default class TresselPlugin extends Plugin {
 	settings: TresselPluginSettings;
 	tokenValid: boolean;
 	userSubscribed: boolean;
-	apiClient: Api;
+
+	legacyApi: LegacyApi;
+	api: ApiClient;
 
 	async onload() {
 		console.info("Loading Tressel Sync for Obsidian plugin");
@@ -46,12 +54,54 @@ export default class TresselPlugin extends Plugin {
 		const settingsTab = new TresselSettingTab(this.app, this);
 		this.addSettingTab(settingsTab);
 
-		this.apiClient = new Api(this.settings.tresselAccessToken);
+		this.legacyApi = new LegacyApi(this.settings.tresselAccessToken);
+		this.api = createApi(() => this.settings.tresselAccessToken);
+
 		await this.saveSettings();
 
 		this.app.workspace.onLayoutReady(() =>
 			this.initializeTressel(settingsTab)
 		);
+
+		// this.app.workspace.on("click", () => {
+		// 	console.log("click");
+		// });
+
+		// this.app.workspace.on("layout-change", () => {
+		// 	console.log("layout-change");
+		// });
+
+		// this.app.workspace.on("editor-change", () => {
+		// 	console.log("editor-change");
+		// });
+
+		// this.app.workspace.on("resize", () => {
+		// 	console.log("resize");
+		// });
+
+		// this.app.workspace.on("active-leaf-change", () => {
+		// 	console.log("active-leaf-change");
+		// });
+
+		// this.app.workspace.on("codemirror", () => {
+		// 	console.log("codemirror");
+		// });
+
+		// this.app.workspace.on("file-open", () => {
+		// 	console.log("file-open");
+		// });
+
+		// this.app.workspace.on("file-menu", () => {
+		// 	console.log("file-menu");
+		// });
+
+		this.addCommand({
+			id: "run-tressel-sync",
+			name: "Sync Tressel",
+			callback: () => {
+				this.syncTressel(false);
+			},
+		});
 	}
 
 	async initializeTressel(settingsTab: TresselSettingTab) {
@@ -70,48 +120,50 @@ export default class TresselPlugin extends Plugin {
 
 	async syncTressel(onload?: boolean) {
 		if (!onload) {
-			new Notice("Starting Tressel Sync");
+			new Notice("Starting Tressel Synceeexyz");
 		}
-		if (this.settings.tresselAccessToken !== "") {
-			// Get the user's imported data by their token
-			try {
-				this.apiClient.updateClient(this.settings.tresselAccessToken);
-				let userData = {} as any;
 
-				do {
-					userData = await (
-						await this.apiClient.syncObsidianUserData()
-					).data;
-
-					if (
-						userData.hasOwnProperty("message") &&
-						(userData.message as string).includes("Error")
-					) {
-						new Notice(
-							"Unable to sync from Tressel - Invalid Token provided"
-						);
-						return;
-					}
-
-					// Create the Tressel folder if it doesn't already exist
-					await createTresselSyncFolder(this.app, this.settings);
-
-					await syncTresselUserData(
-						userData,
-						this.app,
-						this.settings
-					);
-				} while (Object.keys(userData).length > 0);
-			} catch (error) {
-				console.error("Error while syncing from Tressel -", error);
-				new Notice(
-					"Error while syncing from Tressel - check the console for logs"
-				);
-			}
-		} else {
+		if (this.settings.tresselAccessToken === "") {
 			new Notice(
 				"Unable to sync from Tressel - please fill out your Tressel user token before syncing"
 			);
+			return;
+		}
+
+		await syncClippings({
+			api: this.api,
+			app: this.app,
+			basePath: this.settings.syncFolder,
+		});
+
+		try {
+			this.legacyApi.updateClient(this.settings.tresselAccessToken);
+			let userData = {} as any;
+
+			do {
+				userData = await (
+					await this.legacyApi.syncObsidianUserData()
+				).data;
+
+				if (
+					userData.hasOwnProperty("message") &&
+					(userData.message as string).includes("Error")
+				) {
+					new Notice(
+						"Unable to sync from Tressel - Invalid Token provided"
+					);
+					return;
+				}
+
+				await createTresselSyncFolder(this.app, this.settings);
+				await syncTresselUserData(userData, this.app, this.settings);
+			} while (Object.keys(userData).length > 0);
+		} catch (error) {
+			console.error("Error while syncing from Tressel -", error);
+			new Notice(
+				"Error while syncing from Tressel - check the console for logs"
+			);
+			return;
 		}
 
 		if (!onload) {
@@ -135,10 +187,10 @@ export default class TresselPlugin extends Plugin {
 
 	verifyToken = async (settingsTab: TresselSettingTab): Promise<void> => {
 		try {
-			this.apiClient = this.apiClient.updateClient(
+			this.legacyApi = this.legacyApi.updateClient(
 				this.settings.tresselAccessToken
 			);
-			const verifiedResult = await this.apiClient.verifyAccessToken();
+			const verifiedResult = await this.legacyApi.verifyAccessToken();
 			this.tokenValid = verifiedResult.data.valid;
 			try {
 				this.userSubscribed = verifiedResult.data.subscribed;
@@ -260,10 +312,10 @@ class TresselSettingTab extends PluginSettingTab {
 			.addButton((button) => {
 				button.setButtonText("☁️ Clear Sync Memory").onClick(() => {
 					new Notice("Clearing Obsidian sync memory...");
-					this.plugin.apiClient.updateClient(
+					this.plugin.legacyApi.updateClient(
 						this.plugin.settings.tresselAccessToken
 					);
-					this.plugin.apiClient
+					this.plugin.legacyApi
 						.clearObsidianSyncMemory()
 						.then(() => {
 							new Notice(
@@ -347,17 +399,7 @@ class TresselSettingTab extends PluginSettingTab {
 		supportContainer.empty();
 
 		supportContainer.createEl("p", {
-			text: "Need help? Just send an email to hello@tressel.xyz or go to the help center down below to submit a ticket or chat! Expect a response in 24-48hrs",
+			text: "Need help? Just send an email to hello@tressel.xyz. Expect a response in 24-48hrs",
 		});
-
-		supportContainer.createEl(
-			"button",
-			{ text: "🔗 Go to Help Center" },
-			(button) => {
-				button.onClickEvent((e) => {
-					shell.openExternal("https://tressel.tawk.help/");
-				});
-			}
-		);
 	}
 }
