@@ -1,90 +1,81 @@
 import { ApiClient } from "api";
-import { ClippingType } from "contract";
+import { ClippingType, Tweet } from "contract";
 import { twitterClippingToMarkdown } from "formatters";
-import { App, Platform, Vault, normalizePath } from "obsidian";
 import path from "path";
 import sanitize from "sanitize-filename";
+import { minutes } from "time";
+import { PlatformAdapter } from "./sync-engine.d";
 
-type SyncOpts = {
+type SyncEngineOps = {
 	basePath: string;
 	api: ApiClient;
-	app: App;
-};
-export async function syncClippings(opts: SyncOpts) {
-	const vault = opts.app.vault;
+} & PlatformAdapter;
 
-	const syncData = await opts.api.sync();
-	console.log("syncData", syncData);
+export class SyncEngine {
+	private intervalId: number;
 
-	const clippings = syncData.body as ClippingType[];
-	for (const clipping of clippings) {
-		switch (clipping.type) {
-			case "twitter":
-				const data = clipping.data;
-				const markdown = twitterClippingToMarkdown(clipping);
-				const dirPath = path.join(
-					opts.basePath,
-					"Twitter",
-					clipping.data[0].username
-				);
-				const filename = sanitize(data[0].id) + `.md`;
+	private syncInProgress: boolean;
 
-				await createFileAt(vault, {
-					filepath: path.join(dirPath, filename),
-					contents: markdown,
-				});
+	constructor(private opts: SyncEngineOps) {
+		console.log("Initialized Tressel Sync");
 
-				break;
+		this.intervalId = opts.setInterval(() => {
+			this.sync();
+		}, minutes(2));
+
+		opts.onAppBecameActive(() => {
+			console.log("App became active. Running sync.");
+			this.sync();
+		});
+	}
+
+	dispose = () => {
+		this.opts.clearInterval(this.intervalId);
+	};
+
+	sync = async () => {
+		if (this.syncInProgress) {
+			console.warn("Sync is already in progress");
+			return;
 		}
-	}
-}
+		this.syncInProgress = true;
+		try {
+			const syncData = await this.opts.api.sync();
 
-type CreateFileOpts = {
-	filepath: string;
-	contents: string;
-};
-async function createFileAt(
-	vault: Vault,
-	{ filepath, contents }: CreateFileOpts
-) {
-	await createDirectory(vault, path.dirname(filepath));
-	const fileExists = await vault.adapter.exists(filepath);
-	if (fileExists) return;
-	await vault.create(filepath, contents);
-}
+			const clippings = syncData.body as ClippingType[];
+			for (const clipping of clippings) {
+				switch (clipping.type) {
+					case "twitter":
+						const data = clipping.data as Tweet[];
+						const username = data[0].author.username;
+						const markdown = twitterClippingToMarkdown(clipping);
 
-async function createDirectory(vault: Vault, dir: string): Promise<void> {
-	const { adapter } = vault;
-	const root = vault.getRoot().path;
-	const directoryExists = await adapter.exists(dir);
+						if (!username) {
+							console.log("Invalid Twitter clipping", clipping);
+							continue;
+						}
 
-	// ===============================================================
-	// -> Desktop App
-	// ===============================================================
-	if (!Platform.isIosApp && !directoryExists) {
-		return adapter.mkdir(normalizePath(dir));
-	}
-	// ===============================================================
-	// -> Mobile App (IOS)
-	// ===============================================================
-	// This is a workaround for a bug in the mobile app:
-	// To get the file explorer view to update correctly, we have to create
-	// each directory in the path one at time.
+						const dirPath = path.join(
+							this.opts.basePath,
+							"Twitter",
+							username
+						);
 
-	// Split the path into an array of sub paths
-	// Note: `normalizePath` converts path separators to '/' on all platforms
-	// @example '/one/two/three/' ==> ['one', 'one/two', 'one/two/three']
-	// @example 'one\two\three' ==> ['one', 'one/two', 'one/two/three']
-	const subPaths: string[] = normalizePath(dir)
-		.split("/")
-		.filter((part) => part.trim() !== "")
-		.map((_, index, arr) => arr.slice(0, index + 1).join("/"));
+						const filename = sanitize(data[0].id) + `.md`;
 
-	// Create each directory if it does not exist
-	for (const subPath of subPaths) {
-		const directoryExists = await adapter.exists(path.join(root, subPath));
-		if (!directoryExists) {
-			await adapter.mkdir(path.join(root, subPath));
+						this.opts.saveFile({
+							filepath: path.join(dirPath, filename),
+							contents: markdown,
+							onConflict: "skip",
+						});
+
+						break;
+				}
+			}
+		} catch (e) {
+			throw e;
+		} finally {
+			this.syncInProgress = false;
 		}
-	}
+	};
 }

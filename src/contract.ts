@@ -15,12 +15,26 @@ const Clipping = z.object({
 
 export type ClippingType = z.infer<typeof Clipping>;
 
-export const contract = c.router({
+export const apiContract = c.router({
 	ping: {
 		method: "GET",
 		path: "/ping",
 		responses: {
 			200: z.string(),
+		},
+	},
+	getAccessToken: {
+		method: "GET",
+		path: "/auth/access-token",
+		responses: {
+			200: z.string(),
+		},
+	},
+	verifyToken: {
+		method: "GET",
+		path: "/auth/verify-token",
+		responses: {
+			200: z.boolean(),
 		},
 	},
 	capture: {
@@ -45,3 +59,37 @@ export const contract = c.router({
 		},
 	},
 });
+
+export type Tweet = {
+	id: string;
+	text: string;
+	createdAt: string;
+	author: Author;
+	quotedTweet?: QuotedTweet;
+	attachment?: Attachment;
+};
+
+export type Attachment = ImageAttachment | LinkAttachment;
+
+export type ImageAttachment = {
+	type: "image";
+	src: string;
+};
+
+export type LinkAttachment = {
+	type: "link";
+	src: string;
+};
+
+export type Author = {
+	name: string;
+	username: string;
+	avatar?: string;
+};
+
+export type QuotedTweet = {
+	id?: string;
+	source?: string;
+	text: string;
+	author: Author;
+};

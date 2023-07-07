@@ -13,9 +13,11 @@ import {
 	Setting,
 	debounce,
 } from "obsidian";
+import { onAppBecameActive, saveFile } from "obsidian-platform-adapter";
 
 import { FolderSuggest } from "settings/suggesters/FolderSuggester";
-import { syncClippings } from "sync-engine";
+import { SyncEngine } from "sync-engine";
+import { minutes } from "time";
 
 export interface TresselPluginSettings {
 	tresselAccessToken: string;
@@ -38,6 +40,7 @@ export default class TresselPlugin extends Plugin {
 
 	legacyApi: LegacyApi;
 	api: ApiClient;
+	syncEngine: SyncEngine;
 
 	async onload() {
 		console.info("Loading Tressel Sync for Obsidian plugin");
@@ -57,49 +60,31 @@ export default class TresselPlugin extends Plugin {
 		this.legacyApi = new LegacyApi(this.settings.tresselAccessToken);
 		this.api = createApi(() => this.settings.tresselAccessToken);
 
+		this.syncEngine = new SyncEngine({
+			api: this.api,
+			basePath: this.settings.syncFolder,
+			setInterval: (cb, interval) => {
+				const id = window.setInterval(cb, interval);
+				this.registerInterval(id);
+				return id;
+			},
+			clearInterval: (id) => clearInterval(id),
+			saveFile: (opts) => saveFile(this.app.vault, opts),
+			onAppBecameActive: (cb) =>
+				onAppBecameActive(this, minutes(0.1), cb),
+		});
+
 		await this.saveSettings();
 
 		this.app.workspace.onLayoutReady(() =>
 			this.initializeTressel(settingsTab)
 		);
 
-		// this.app.workspace.on("click", () => {
-		// 	console.log("click");
-		// });
-
-		// this.app.workspace.on("layout-change", () => {
-		// 	console.log("layout-change");
-		// });
-
-		// this.app.workspace.on("editor-change", () => {
-		// 	console.log("editor-change");
-		// });
-
-		// this.app.workspace.on("resize", () => {
-		// 	console.log("resize");
-		// });
-
-		// this.app.workspace.on("active-leaf-change", () => {
-		// 	console.log("active-leaf-change");
-		// });
-
-		// this.app.workspace.on("codemirror", () => {
-		// 	console.log("codemirror");
-		// });
-
-		// this.app.workspace.on("file-open", () => {
-		// 	console.log("file-open");
-		// });
-
-		// this.app.workspace.on("file-menu", () => {
-		// 	console.log("file-menu");
-		// });
-
 		this.addCommand({
 			id: "run-tressel-sync",
 			name: "Sync Tressel",
 			callback: () => {
-				this.syncTressel(false);
+				this.syncTressel(true);
 			},
 		});
 	}
@@ -109,7 +94,7 @@ export default class TresselPlugin extends Plugin {
 			// Verify token
 			await this.verifyToken(settingsTab);
 			if (this.tokenValid) {
-				await this.syncTressel(true);
+				await this.syncTressel(false);
 			} else {
 				new Notice(
 					"Unable to sync from Tressel - Invalid Token provided"
@@ -118,9 +103,9 @@ export default class TresselPlugin extends Plugin {
 		} catch {}
 	}
 
-	async syncTressel(onload?: boolean) {
-		if (!onload) {
-			new Notice("Starting Tressel Synceeexyz");
+	async syncTressel(notify: boolean = false) {
+		if (notify) {
+			new Notice("Starting Tressel Sync");
 		}
 
 		if (this.settings.tresselAccessToken === "") {
@@ -130,11 +115,7 @@ export default class TresselPlugin extends Plugin {
 			return;
 		}
 
-		await syncClippings({
-			api: this.api,
-			app: this.app,
-			basePath: this.settings.syncFolder,
-		});
+		await this.syncEngine.sync();
 
 		try {
 			this.legacyApi.updateClient(this.settings.tresselAccessToken);
@@ -166,7 +147,7 @@ export default class TresselPlugin extends Plugin {
 			return;
 		}
 
-		if (!onload) {
+		if (!notify) {
 			new Notice("Finished Tressel Sync");
 		}
 	}
@@ -384,7 +365,7 @@ class TresselSettingTab extends PluginSettingTab {
 			{ text: "🔃 Resync" },
 			(button) => {
 				button.onClickEvent((e) => {
-					this.plugin.syncTressel(false);
+					this.plugin.syncTressel(true);
 				});
 			}
 		);

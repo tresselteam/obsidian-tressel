@@ -1,10 +1,10 @@
 import { initClient } from "@ts-rest/core";
 import axios, { AxiosError, AxiosResponse, Method } from "axios";
-import { contract } from "contract";
+import { apiContract } from "contract";
 import { API_BASE_URL } from "env";
 
 export function createApi(getAccessToken: () => string) {
-	const client = initClient(contract, {
+	const client = initClient(apiContract, {
 		baseUrl: API_BASE_URL,
 		baseHeaders: {
 			"Content-Type": "application/json",
