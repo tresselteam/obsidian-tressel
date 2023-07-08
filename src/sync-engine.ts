@@ -46,7 +46,7 @@ export class SyncEngine {
 			for (const clipping of clippings) {
 				switch (clipping.type) {
 					case "twitter":
-						const data = clipping.data as Tweet[];
+						const data = JSON.parse(clipping.data) as Tweet[];
 						const username = data[0].author.username;
 						const markdown = twitterClippingToMarkdown(clipping);
 

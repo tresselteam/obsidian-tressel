@@ -1,7 +1,8 @@
 import { Attachment, ClippingType, QuotedTweet, Tweet } from "contract";
 
 export function twitterClippingToMarkdown(clipping: ClippingType): string {
-	const tweets = clipping.data as Tweet[];
+	const tweets = JSON.parse(clipping.data) as Tweet[];
+
 	const tweet = tweets[0];
 	return `
 ---
@@ -12,7 +13,7 @@ posted: ${clipping.created_at}
 saved: ${clipping.saved_at}
 ---
 
-${clipping.data.map(tweetToMarkdown).join("\n\n---\n\n")}
+${tweets.map(tweetToMarkdown).join("\n\n---\n\n")}
 `.trim();
 }
 
