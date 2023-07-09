@@ -42,11 +42,9 @@ export class SyncEngine {
 		try {
 			const syncData = await this.opts.api.sync();
 
-			console.log("syncData", syncData);
-
 			const clippings = syncData.body as ClippingType[];
 			for (const clipping of clippings) {
-				const { metadata, body } = parseMarkdown(clipping.markdown);
+				const { metadata } = parseMarkdown(clipping.markdown);
 				const subpath = getFilePath(clipping.type, metadata);
 				if (!subpath) {
 					console.error("Invalid clipping", clipping);
@@ -57,7 +55,7 @@ export class SyncEngine {
 
 				this.opts.saveFile({
 					filepath,
-					contents: body,
+					contents: clipping.markdown,
 					onConflict: "skip",
 				});
 			}
@@ -78,6 +76,7 @@ function getFilePath(type: Provider, metadata: Metadata): string | undefined {
 
 			return path.join("Twitter", username, sanitize(id) + `.md`);
 		case "webpage":
-			return undefined;
+			const title = metadata.title as string;
+			return path.join("Web Pages", sanitize(title) + `.md`);
 	}
 }
