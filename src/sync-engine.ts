@@ -1,6 +1,6 @@
+import { Metadata, parseMarkdown } from "@util/markdown";
 import { ApiClient } from "api";
-import { ClippingType, Tweet } from "contract";
-import { twitterClippingToMarkdown } from "formatters";
+import { ClippingType, Provider } from "contract";
 import path from "path";
 import sanitize from "sanitize-filename";
 import { minutes } from "time";
@@ -42,35 +42,24 @@ export class SyncEngine {
 		try {
 			const syncData = await this.opts.api.sync();
 
+			console.log("syncData", syncData);
+
 			const clippings = syncData.body as ClippingType[];
 			for (const clipping of clippings) {
-				switch (clipping.type) {
-					case "twitter":
-						const data = JSON.parse(clipping.data) as Tweet[];
-						const username = data[0].author.username;
-						const markdown = twitterClippingToMarkdown(clipping);
-
-						if (!username) {
-							console.log("Invalid Twitter clipping", clipping);
-							continue;
-						}
-
-						const dirPath = path.join(
-							this.opts.basePath,
-							"Twitter",
-							username
-						);
-
-						const filename = sanitize(data[0].id) + `.md`;
-
-						this.opts.saveFile({
-							filepath: path.join(dirPath, filename),
-							contents: markdown,
-							onConflict: "skip",
-						});
-
-						break;
+				const { metadata, body } = parseMarkdown(clipping.markdown);
+				const subpath = getFilePath(clipping.type, metadata);
+				if (!subpath) {
+					console.error("Invalid clipping", clipping);
+					continue;
 				}
+
+				const filepath = path.join(this.opts.basePath, subpath);
+
+				this.opts.saveFile({
+					filepath,
+					contents: body,
+					onConflict: "skip",
+				});
 			}
 		} catch (e) {
 			throw e;
@@ -78,4 +67,17 @@ export class SyncEngine {
 			this.syncInProgress = false;
 		}
 	};
+}
+
+function getFilePath(type: Provider, metadata: Metadata): string | undefined {
+	switch (type) {
+		case "twitter":
+			const username = metadata.username as string;
+			const id = metadata.id as string;
+			if (!username || !id) return;
+
+			return path.join("Twitter", username, sanitize(id) + `.md`);
+		case "webpage":
+			return undefined;
+	}
 }

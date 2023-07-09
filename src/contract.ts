@@ -3,6 +3,8 @@ import { z } from "zod";
 
 const c = initContract();
 
+export type Provider = "twitter" | "webpage";
+
 const Clipping = z.object({
 	id: z.string(),
 	user_id: z.string(),
@@ -10,10 +12,18 @@ const Clipping = z.object({
 	content: z.string(),
 	created_at: z.string(),
 	saved_at: z.string(),
-	data: z.any(),
+	markdown: z.any(),
 });
 
 export type ClippingType = z.infer<typeof Clipping>;
+
+const snapshotInput = z.strictObject({
+	type: z.enum(["twitter", "webpage"]),
+	url: z.string(),
+	content: z.string(),
+});
+
+export type Shapshot = z.infer<typeof snapshotInput>;
 
 export const apiContract = c.router({
 	ping: {
@@ -40,10 +50,7 @@ export const apiContract = c.router({
 	capture: {
 		method: "POST",
 		path: "/capture",
-		body: z.object({
-			type: z.enum(["twitter", "webpage"]),
-			content: z.string(),
-		}),
+		body: snapshotInput,
 		responses: {
 			200: z.boolean(),
 		},
@@ -92,4 +99,11 @@ export type QuotedTweet = {
 	source?: string;
 	text: string;
 	author: Author;
+};
+
+export type Capture = {
+	url: string;
+	type: "twitter" | "webpage";
+	title: string;
+	content: string;
 };
