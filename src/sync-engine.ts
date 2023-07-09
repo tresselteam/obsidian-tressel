@@ -77,6 +77,11 @@ function getFilePath(type: Provider, metadata: Metadata): string | undefined {
 			return path.join("Twitter", username, sanitize(id) + `.md`);
 		case "webpage":
 			const title = metadata.title as string;
-			return path.join("Web Pages", sanitize(title) + `.md`);
+			const source = metadata.source as string;
+			return path.join(
+				"Web Pages",
+				new URL(source).hostname,
+				sanitize(title) + `.md`
+			);
 	}
 }
